@@ -2,6 +2,7 @@
 
 #### AUTH: Register to healthcarology
 
+<details>
  <summary><code>POST</code> <code><b>https://healthcarology/fr/api/register</b></code></summary>
 
 ##### Parameters
@@ -52,3 +53,4 @@
 > "birthday": "1997-07-20"
 >}	
 > ```
+</details>
