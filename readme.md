@@ -20,17 +20,26 @@
 > | province      |   | ?string   | N/A  |
 > | town_id      |   | ?integer   | N/A  |
 > | city_id      |   | ?integer   | N/A  |
-> | avenue      |   | ?string   | N/A  |
+> | avenue      |   | ?string   | N/A  |    
 > | quartier      |   | ?string   | N/A  |
 > | company_id      | required  | integer   | N/A  |
 
+
+##### Headers
+
+> | Name                   | content-type       |   
+> -------------------------|--------------------|
+> | `Content-Type`         | `application/json` |
+> | `App-Key`              | `string`           |
+> | `App-Secret`           | `string`           |
 
 ##### Responses
 
 > | http code     | content-type                      | response                                                            |
 > |---------------|-----------------------------------|---------------------------------------------------------------------|
 > | `201`         | `application/json`        | <code>{"success": true, "message": "Account created successfully, "user": {}, "token": "string"}</code>                                |
-> | `400`         | `application/json`                | `{"success":false, "message":"Bad Request"}`                
+> | `400`         | `application/json`                | `{"success":false, "message":"Bad Request"}`  
+> | `401`         | `Exception`                | `Unauthorized`    
 
 ##### JSON data Example 
 
