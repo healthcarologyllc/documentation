@@ -3,7 +3,7 @@
 #### AUTH: Register to healthcarology
 
 <details>
- <summary><code>POST</code> <code><b>https://healthcarology/fr/api/register</b></code></summary>
+ <summary><code>POST</code> <code><b>https://healthcarology.org/fr/api/register</b></code></summary>
 
 ##### Parameters
 
