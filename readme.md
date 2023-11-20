@@ -66,11 +66,6 @@
 ```
 
 - **ROLE:**  IS_AUTHENTICATED_ANONYMOUSLY (not connected) 
-- **Headers:**  
-    - **Content-type** : application/json
-    - **Authorization** : Bearer {token}  
-    - **Accept**: application/json  
-
 - **Response body**: Success, code 200  
 ```json
 {
@@ -138,6 +133,10 @@
 
 ## Get Tokens
 - **URL:** POST https://v2.healthcarology.org/api/tokens
+- **Headers:**  
+    - **Content-type** : application/json
+    - **Authorization** : Bearer {token}  
+    - **Accept**: application/json  
 
 ```json
 {
