@@ -137,7 +137,7 @@
 ``` -->
 
 ## Get Tokens
-- **URL:** POST https://v2.healthcarology.org/api/token
+- **URL:** POST https://v2.healthcarology.org/api/tokens
 
 ```json
 {
