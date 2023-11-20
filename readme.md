@@ -134,3 +134,48 @@
 	]
 }
 ```
+
+
+## Get Tokens
+- **URL:** POST https://v2.healthcarology.org/api/token
+
+```json
+{
+	"user": "api/users/1",
+	"token":171457
+}
+```
+
+- **Response body**: Success, code 200  
+```json
+{
+	"@context": "\/api\/contexts\/Token",
+	"@id": "\/api\/tokens\/4",
+	"@type": "Token",
+	"token": 171457,
+	"user": {
+		"@id": "\/api\/users\/1",
+		"@type": "User",
+		"id": 1,
+		"email": "mukanisa@healthcarology.com",
+		"name": "KASSE",
+		"lastname": "Mukanisa",
+		"firstname": "Christian",
+		"fullName": "KASSE Mukanisa Christian",
+		"sexe": "male",
+		"phoneNumber": "0974794703",
+		"createdAt": "2023-02-06T00:00:00+00:00"
+	},
+	"createdAt": "2023-11-20T09:47:52+00:00"
+}
+```
+
+- **Load all tokens**
+- **URL:** POST https://v2.healthcarology.org/api/tokens/all
+
+```json
+{
+
+}
+```
+
