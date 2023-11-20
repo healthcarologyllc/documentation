@@ -89,6 +89,7 @@
 }
 ```
 
+<!-- 
 ## Request Reset Password
 - **URL:** POST https://v2.healthcarology.org/auth/reset/password
 
@@ -133,8 +134,7 @@
 		}
 	]
 }
-```
-
+``` -->
 
 ## Get Tokens
 - **URL:** POST https://v2.healthcarology.org/api/token
