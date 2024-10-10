@@ -56,7 +56,7 @@
 </details>
 
 ## Login
-- **URL:** POST https://v2.healthcarology.org/api/login
+- **URL:** POST https://healthcarology.org/api/login
 
 ```json
 {
@@ -86,7 +86,7 @@
 
 <!-- 
 ## Request Reset Password
-- **URL:** POST https://v2.healthcarology.org/auth/reset/password
+- **URL:** POST https://healthcarology.org/auth/reset/password
 
 ```json
 {
@@ -132,7 +132,7 @@
 ``` -->
 
 ## Get Tokens
-- **URL:** POST https://v2.healthcarology.org/api/tokens
+- **URL:** POST https://healthcarology.org/api/tokens
 - **Headers:**  
     - **Content-type** : application/json
     - **Authorization** : Bearer {token}  
@@ -170,7 +170,7 @@
 ```
 
 - **Load all tokens**
-- **URL:** POST https://v2.healthcarology.org/api/tokens/all
+- **URL:** POST https://healthcarology.org/api/tokens/all
 
 ```json
 {
