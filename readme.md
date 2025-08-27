@@ -1,180 +1,156 @@
-## Healthcarology Rest API Documentation
+### API Documentation - `User` Resource
 
-#### AUTH: Register to healthcarology
+This documentation outlines the available endpoints for managing users (patients and staff) within the application.
 
-<details>
- <summary><code>POST</code> <code><b>https://healthcarology.org/fr/api/register</b></code></summary>
+**Base URL:** `/api`
 
-##### Parameters
+## General Notes
 
-> | name      |  type     | data type               | description                                                           |
-> |-----------|-----------|-------------------------|-----------------------------------------------------------------------|
-> | email  |  required | email   | N/A  |
-> | password  |  required | string   | N/A  |
-> | lasrname  |  required | string   | N/A  |
-> | firstname |  required | string   | N/A  |
-> | middlename|           | ?string  | N/A  |
-> | phoneNumber |   | ?string   | N/A  |
-> | sex      |  required | string   | male or female  |
-> | birthday      |   | ?date   | N/A  |
-> | nationality      |   | ?string   | N/A  |
-> | province      |   | ?string   | N/A  |
-> | town_id      |   | ?integer   | N/A  |
-> | city_id      |   | ?integer   | N/A  |
-> | avenue      |   | ?string   | N/A  |    
-> | quartier      |   | ?string   | N/A  |
-> | company_id      | required  | integer   | N/A  |
+### Authentication
 
+Most endpoints require authentication. To authenticate, you must first obtain a JWT token by sending a `POST` request to the `/api/login` endpoint with the user's credentials.
 
-##### Headers
-
-> | Name                   | content-type       |   
-> -------------------------|--------------------|
-> | `Content-Type`         | `application/json` |
-> | `App-Key`              | `string`           |
-> | `App-Secret`           | `string`           |
-
-##### Responses
-
-> | http code     | content-type                      | response                                                            |
-> |---------------|-----------------------------------|---------------------------------------------------------------------|
-> | `201`         | `application/json`        | <code>{"success": true, "message": "Account created successfully, "user": {}, "token": "string"}</code>                                |
-> | `400`         | `application/json`                | `{"success":false, "message":"Bad Request"}`  
-> | `401`         | `Exception`                | `Unauthorized`    
-
-##### JSON data Example 
-
-> ```javascript
->{
-> "lastname": "Name",
-> "email": "exemple@email.com",
-> "password": "password",
-> "company_id": 324,
-> "birthday": "1997-07-20"
->}	
-> ```
-</details>
-
-## Login
-- **URL:** POST https://healthcarology.org/api/login
-
+**Example Login Request:**
 ```json
 {
-  "username": "496718665",
-  "password": "password"
+  "username": "email@example.com",
+  "password": "your_password"
 }
 ```
 
-- **ROLE:**  IS_AUTHENTICATED_ANONYMOUSLY (not connected) 
-- **Response body**: Success, code 200  
-```json
-{
-	"token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3MDA0NzMwNTAsImV4cCI6MTcwMDQ3NjY1MCwicm9sZXMiOlsiUk9MRV9ST09UIiwiUk9MRV9VU0VSIl0sInVzZXJuYW1lIjoiNjNlMGU1MWViZDhmOCJ9.SbL_VkbXNVswL6vS1waFH-m6EojPsJJza_EgpuDUJdDb1AiPojYTFybTCWRRUSU346NYt49e92ieybYrpqRhrSepOrzboHOTy229W0DM64REcEF7G1gBmaPRKy09OloXgkX2U5-vjmELfOHL6jRNP87MdvOT6DHsOnxr0T5i9gbNqk21P5U_9WVLs_oLGE80D2_2lYjGVg5GkyIYmeaksfgOMsu5znEEYaJBunytfDc8JBOB8pNLf4B9wYSJhO-wG4tPy2ra87H4xfOuIXo8vb8FKtLQ_x9LXnbL_9ajOOIiAg6lsbM-5F1ttsUvL5dAIPSZgRXEMBVDqNw2-1gQEg",
-	"data": {
-		"id": 1,
-		"slug": "293d800a-fa40-420e-8e10-c382382684fd"
-	}
-}
-```
-- **Unauthorize Response** : Unauthorize, code 401
-```json
-{
-  "code": 401,
-  "message": "Invalid credentials."
-}
-```
+Once you have the token, you must include it in the header of all subsequent requests:
+`Authorization: Bearer YOUR_JWT_TOKEN`
 
-<!-- 
-## Request Reset Password
-- **URL:** POST https://healthcarology.org/auth/reset/password
+### Response Formats
 
-```json
-{
-	"phoneNumber":"4927897738"
-}
-```
+-   **Success:** Successful responses are typically in `JSON` format with a status code of `200 OK` (for GET), `201 Created` (for POST), `200 OK` (for PUT), or `204 No Content` (for DELETE).
+-   **Error:** Validation errors return a `400 Bad Request` or `422 Unprocessable Entity` status code with details about the errors. Authentication or permission errors return `401 Unauthorized` or `403 Forbidden` codes.
 
-- **Response body**: Success, code 200  
-```json
-{
-	"message": "Un code de confirmation a été envoyé à ce numero",
-	"data": {
-		"id": 13,
-		"email": null,
-		"name": "Papa Jorda ",
-		"lastname": null,
-		"firstname": null,
-		"phoneNumber": 4927897738,
-		"sexe": null,
-		"checker": {
-			"phoneVerifiedAt": null,
-			"phoneVerified": null,
-			"phoneResetCode": 62983,
-			"phoneCode": 67133
-		},
-		"uid": "c129626a-cb67-4b05-a4fa-7bd2fd23b250"
-	}
-}
-```
+---
 
-- **Not found Response**
-```json
-{
-	"hydra:title": "ConstraintViolationList",
-	"hydra:description": "name: Aucun compte est associé à ce numéro téléphone",
-	"violations": [
-		{
-			"phoneNumber": "4927s897738",
-			"message": "Aucun compte est associé à ce numéro téléphone"
-		}
-	]
-}
-``` -->
+## 1. Account Management & Authentication
 
-## Get Tokens
-- **URL:** POST https://healthcarology.org/api/tokens
-- **Headers:**  
-    - **Content-type** : application/json
-    - **Authorization** : Bearer {token}  
-    - **Accept**: application/json  
+### 1.1 Create a User Account
+Creates a new patient record or user account.
 
-```json
-{
-	"user": "api/users/1",
-	"token":171457
-}
-```
+-   **Endpoint:** `POST /api/users`
+-   **Permissions:** Open to the public.
+-   **Request Body:**
+    ```json
+    {
+      "email": "new.patient@email.com",
+      "plainPassword": "password123",
+      "name": "LASTNAME",
+      "lastname": "Midname",
+      "firstname": "Firstname",
+      "sexe": "Male",
+      "phoneNumber": "0812345678",
+      "birthday": "1990-01-15T00:00:00+00:00"
+    }
+    ```
+-   **Success Response (`201 Created`):** A JSON object representing the newly created user.
 
-- **Response body**: Success, code 200  
-```json
-{
-	"@context": "\/api\/contexts\/Token",
-	"@id": "\/api\/tokens\/4",
-	"@type": "Token",
-	"token": 171457,
-	"user": {
-		"@id": "\/api\/users\/1",
-		"@type": "User",
-		"id": 1,
-		"email": "mukanisa@healthcarology.com",
-		"name": "KASSE",
-		"lastname": "Mukanisa",
-		"firstname": "Christian",
-		"fullName": "KASSE Mukanisa Christian",
-		"sexe": "male",
-		"phoneNumber": "0974794703",
-		"createdAt": "2023-02-06T00:00:00+00:00"
-	},
-	"createdAt": "2023-11-20T09:47:52+00:00"
-}
-```
+### 1.2 Change Password
+Allows an authenticated user to change their own password.
 
-- **Load all tokens**
-- **URL:** POST https://healthcarology.org/api/tokens/all
+-   **Endpoint:** `POST /api/users/{id}/reset-password`
+-   **Permissions:** The user must be authenticated and can only modify their own password (`{id}` must be their own ID).
+-   **Request Body:**
+    ```json
+    {
+      "oldPassword": "current_password",
+      "newPassword": "new_secure_password"
+    }
+    ```
+-   **Success Response (`200 OK`):**
+    ```json
+    {
+      "message": "Password reset successfully."
+    }
+    ```
 
-```json
-{
+---
 
-}
-```
+## 2. User Management (CRUD)
 
+### 2.1 Get User Information (Profile)
+Retrieves the complete details of a specific user.
+
+-   **Endpoint:** `GET /api/users/{id}`
+-   **Permissions:** Administrators (`ROLE_ADMIN`) or the user themselves.
+-   **Success Response (`200 OK`):** A JSON object containing the user's detailed information, including their address, consultations, etc. (as defined by serialization groups).
+
+### 2.2 Update a User
+Updates a user's profile information. This uses a custom controller for advanced logic (e.g., handling profile picture uploads).
+
+-   **Endpoint:** `PUT /api/users/{id}`
+-   **Permissions:** Administrators (`ROLE_ADMIN`) or the user themselves.
+-   **Request Body:** A JSON object containing the fields to be updated (e.g., `name`, `phoneNumber`).
+-   **Success Response (`200 OK`):** The updated user JSON object.
+
+### 2.3 List Users
+Retrieves a paginated list of all users.
+
+-   **Endpoint:** `GET /api/users`
+-   **Permissions:** Administrators (`ROLE_ADMIN`) or Helpdesk staff (`ROLE_HELPDESK`).
+-   **Success Response (`200 OK`):** A collection of user objects.
+
+### 2.4 Delete a User
+Deletes a user account.
+
+-   **Endpoint:** `DELETE /api/users/{id}`
+-   **Permissions:** Administrators (`ROLE_ADMIN`) or the user themselves.
+-   **Success Response (`204 No Content`):** No data is returned.
+
+---
+
+## 3. Patient-Specific Operations
+
+These endpoints provide access to specific medical data related to a patient.
+
+### 3.1 Vital Signs Summary
+Retrieves a summary of the latest vital signs recorded for a patient.
+
+-   **Endpoint:** `GET /api/users/{id}/vital_signs_summary`
+-   **Permissions:** Nursing staff (`ROLE_NURSE`), the patient themselves, or any healthcare professional.
+-   **Success Response (`200 OK`):** A JSON object containing aggregated data (format defined by the `user:vitals:summary` group).
+
+### 3.2 Last Consultation
+Retrieves information about the patient's most recent consultation.
+
+-   **Endpoint:** `GET /api/users/{id}/last_consultation`
+-   **Permissions:** Any healthcare professional or the patient themselves.
+-   **Success Response (`200 OK`):** A JSON object representing the `Consultation` entity.
+
+### 3.3 Add a Pain Log
+Records a new pain level entry for the patient.
+
+-   **Endpoint:** `POST /api/users/{id}/pain_logs`
+-   **Permissions:** The patient themselves.
+-   **Request Body:**
+    ```json
+    {
+      "level": 5,
+      "description": "Acute pain in the lower back."
+    }
+    ```
+-   **Success Response (`201 Created`):** The newly created `PainLog` object.
+
+### 3.4 Request an Appointment
+Allows a user to request an appointment.
+
+-   **Endpoint:** `POST /api/users/{id}/request_appointment`
+-   **Permissions:** The patient themselves or a staff member (`ROLE_STAFF`).
+-   **Request Body:** An `AppointmentRequestDto` (the exact fields need to be specified).
+-   **Success Response (`201 Created`):** The newly created `Appointment` object.
+
+---
+
+## 4. Technical Operations
+
+### 4.1 Check Wallet
+An endpoint reserved for developers to check a user's wallet.
+
+-   **Endpoint:** `GET /api/users/wallet/{id}`
+-   **Permissions:** Developers (`ROLE_DEVELOPER`) or the user themselves.
+-   **Success Response (`200 OK`):** A JSON object representing the user's `Wallet`.
