@@ -2,7 +2,7 @@
 
 This documentation outlines the available endpoints for managing users (patients and staff) within the application.
 
-**Base URL:** `/api`
+**Base URL:** `/sante.healthcarology.org/api`
 
 ## General Notes
 
