@@ -2,7 +2,7 @@
 
 Cette documentation décrit les points d'accès (endpoints) disponibles pour la gestion des utilisateurs (patients et personnel) de l'application.
 
-**URL de base :** `/api`
+**Base URL:** `https://sante.healthcarology.org/api`
 
 ## Notes Générales
 
