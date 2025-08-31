@@ -36,6 +36,11 @@ This documentation outlines the available endpoints for managing users and authe
   - [Patient-Specific Medical Data](#patient-specific-medical-data)
   - [Appointments](#appointments)
   - [Technical \& Other](#technical--other)
+  - [Address \& Geolocation Endpoints](#address--geolocation-endpoints)
+  - [Healthcare Zones Endpoints](#healthcare-zones-endpoints)
+    - [Detailed Examples](#detailed-examples)
+    - [GET `/api/countries`](#get-apicountries)
+    - [GET `/api/countries/{id}/provinces`](#get-apicountriesidprovinces)
 
 ## General Notes
 
@@ -303,3 +308,86 @@ Absolument. Voici la section `Full Route List Summary` complète, mise à jour p
 | Method | Path                               | Description                               |
 |--------|------------------------------------|-------------------------------------------|
 | `GET`  | `/api/users/wallet/{id}`           | Get a user's wallet (Developer).          |
+
+
+---
+
+### Address & Geolocation Endpoints
+
+These endpoints allow you to retrieve geographical data in a hierarchical way (Country -> Province -> City -> Town). They are designed as **subresources**, meaning you first fetch a parent resource to get the URL for its children.
+
+| Method | API Path                         | Description                                |
+|--------|----------------------------------|--------------------------------------------|
+| `GET`  | `/api/countries`                 | Lists all countries.                       |
+| `GET`  | `/api/countries/{id}/provinces`  | Retrieves the provinces for a given country. |
+| `GET`  | `/api/provinces/{id}/cities`     | Retrieves the cities for a given province.   |
+| `GET`  | `/api/cities/{id}/towns`         | Retrieves the towns for a given city.        |
+
+### Healthcare Zones Endpoints
+
+These endpoints follow the same subresource pattern for healthcare-specific geographical areas.
+
+| Method | API Path                         | Description                                  |
+|--------|----------------------------------|----------------------------------------------|
+| `GET`  | `/api/provinces/{id}/zones`      | Retrieves the health zones for a given province. |
+| `GET`  | `/api/zones/{id}/areas`          | Retrieves the health areas for a given zone.   |
+
+---
+#### Detailed Examples
+
+#### GET `/api/countries`
+-   **Description:** Retrieves a list of all available countries. This is the starting point for the address cascade.
+-   **Permissions:** Public or Authenticated User.
+-   **Success Response (`200 OK`):** A Hydra collection of `Country` objects.
+    ```json
+    {
+      "@context": "/api/contexts/Country",
+      "@id": "/api/countries",
+      "@type": "hydra:Collection",
+      "hydra:member": [
+        {
+          "@id": "/api/countries/1",
+          "@type": "Country",
+          "id": 1,
+          "name": "Democratic Republic of Congo"
+        },
+        {
+          "@id": "/api/countries/2",
+          "@type": "Country",
+          "id": 2,
+          "name": "France"
+        }
+      ],
+      "hydra:totalItems": 2
+    }
+    ```
+
+#### GET `/api/countries/{id}/provinces`
+-   **Description:** Retrieves the collection of `Province` resources belonging to a specific `Country`.
+-   **Permissions:** Public or Authenticated User.
+-   **URL Parameters:**
+    -   `{id}` (integer, **required**): The ID of the parent `Country`.
+-   **Success Response (`200 OK`):** A Hydra collection of `Province` objects.
+    ```json
+    {
+      "@context": "/api/contexts/Province",
+      "@id": "/api/countries/1/provinces",
+      "@type": "hydra:Collection",
+      "hydra:member": [
+        {
+          "@id": "/api/provinces/12",
+          "@type": "Province",
+          "id": 12,
+          "name": "Kinshasa"
+        },
+        {
+          "@id": "/api/provinces/13",
+          "@type": "Province",
+          "id": 13,
+          "name": "Kongo Central"
+        }
+      ],
+      "hydra:totalItems": 2
+    }
+    ```
+_Note: The other endpoints (`/provinces/{id}/cities`, `/cities/{id}/towns`, etc.) follow the same Hydra collection response format._
