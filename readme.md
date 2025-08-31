@@ -1,7 +1,3 @@
-Of course. Here is the fully detailed API documentation in English, structured with a table of contents and detailed descriptions for each endpoint as requested.
-
----
-
 ### API Documentation - `User` & `Auth` Resources
 
 This documentation outlines the available endpoints for managing users and authentication for the application.
