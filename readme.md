@@ -11,6 +11,7 @@ This documentation outlines the available endpoints for managing users and authe
 ## Table of Contents
 - [Table of Contents](#table-of-contents)
 - [General Notes](#general-notes)
+- [https://sante.healthcarology.org/api](#httpssantehealthcarologyorgapi)
   - [Authentication](#authentication)
   - [Response Formats](#response-formats)
 - [Authentication \& Account Lifecycle](#authentication--account-lifecycle)
@@ -43,7 +44,7 @@ This documentation outlines the available endpoints for managing users and authe
     - [GET `/api/countries/{id}/provinces`](#get-apicountriesidprovinces)
 
 ## General Notes
-
+## https://sante.healthcarology.org/api
 ### Authentication
 
 Most endpoints require authentication. To authenticate, you must first obtain a JWT by sending a `POST` request to the `/api/login` endpoint with the user's credentials.
