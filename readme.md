@@ -7,16 +7,22 @@ This documentation outlines the available endpoints for managing users and authe
 ## Table of Contents
 - [Table of Contents](#table-of-contents)
 - [General Notes](#general-notes)
-- [https://sante.healthcarology.org/api](#httpssantehealthcarologyorgapi)
+- [https://sante.healthcarology.org](#httpssantehealthcarologyorg)
   - [Authentication](#authentication)
   - [Response Formats](#response-formats)
 - [Authentication \& Account Lifecycle](#authentication--account-lifecycle)
   - [POST `/api/auth/register`](#post-apiauthregister)
   - [POST `/api/login`](#post-apilogin)
   - [POST `/api/auth/logout`](#post-apiauthlogout)
-  - [POST `/api/users/{id}/change-password`](#post-apiusersidchange-password)
-  - [POST `/api/auth/forgot-password`](#post-apiauthforgot-password)
-  - [POST `/api/auth/reset-password`](#post-apiauthreset-password)
+  - [POST `/api/auth/change-password`](#post-apiauthchange-password)
+- [Password Reset Workflow (100% API)](#password-reset-workflow-100-api)
+  - [Step 1: User requests a password reset](#step-1-user-requests-a-password-reset)
+    - [POST `/api/auth/forgot-password`](#post-apiauthforgot-password)
+  - [Step 2: User clicks the link and arrives on the Frontend](#step-2-user-clicks-the-link-and-arrives-on-the-frontend)
+  - [Step 3: Frontend displays the form and sends the new password to the API](#step-3-frontend-displays-the-form-and-sends-the-new-password-to-the-api)
+    - [POST `/api/auth/reset-password`](#post-apiauthreset-password)
+  - [Step 4: Frontend displays the final result](#step-4-frontend-displays-the-final-result)
+  - [POST `/api/auth/reset-password`](#post-apiauthreset-password-1)
   - [POST `/api/auth/verify-email`](#post-apiauthverify-email)
   - [POST `/api/auth/resend-verification`](#post-apiauthresend-verification)
 - [User Profile Management](#user-profile-management)
@@ -136,66 +142,167 @@ For every subsequent request to a protected endpoint, you must include the token
 -   **Permissions:** Authenticated User.
 -   **Success Response (`200 OK`):** `{ "success": true }`
 
-### POST `/api/users/{id}/change-password`
--   **Description:** Allows an authenticated user to change their own password.
--   **Permissions:** The authenticated user on their own resource.
--   **Request Body & Validation Rules:**
-    ```json
-    {
-      "currentPassword": "my_old_password", // Required, string
-      "newPassword": "my_new_secure_password" // Required, string, min 8 chars
-    }
-    ```
--   **Success Response (`200 OK`):** `{ "success": true }`
--   **Error Response (`400 Bad Request`):** If `currentPassword` is incorrect.
+---
 
-### POST `/api/auth/forgot-password`
--   **Description:** Initiates the password reset process by sending an email with a reset token.
--   **Permissions:** Public.
--   **Request Body & Validation Rules:**
-    ```json
-    {
-      "email": "user@example.com" // Required, string
-    }
-    ```
--   **Success Response (`200 OK`):** `{ "success": true }`. The response is always successful to prevent email enumeration attacks.
+### POST `/api/auth/change-password`
 
-### POST `/api/auth/reset-password`
--   **Description:** Resets the user's password using the token received by email.
--   **Permissions:** Public.
--   **Request Body & Validation Rules:**
+-   **Description:** Allows a currently authenticated user to change their password.
+-   **Permissions:** Authenticated User (`IS_AUTHENTICATED_FULLY`).
+-   **Request Body:**
     ```json
     {
-      "token": "a1b2c3d4...",       // Required, string
-      "newPassword": "my_new_password" // Required, string, min 8 chars
+      "currentPassword": "my_current_secure_password",
+      "newPassword": "my_new_even_more_secure_password"
     }
     ```
--   **Success Response (`200 OK`):** `{ "success": true }`
--   **Error Response (`400 Bad Request`):** If the token is invalid or expired.
-
-### POST `/api/auth/verify-email`
--   **Description:** Verifies a user's email address using a token.
--   **Permissions:** Public.
--   **Request Body & Validation Rules:**
+-   **Validation Rules:**
+    -   `currentPassword` (string, **required**): Must match the user's current password.
+    -   `newPassword` (string, **required**): Must be at least 8 characters long.
+-   **Success Response (`200 OK`):**
     ```json
     {
-      "token": "e5f6g7h8..." // Required, string
+      "success": true
     }
     ```
--   **Success Response (`200 OK`):** `{ "success": true }`
-
-### POST `/api/auth/resend-verification`
--   **Description:** Resends the email verification link to a user.
--   **Permissions:** Public.
--   **Request Body & Validation Rules:**
-    ```json
-    {
-      "email": "user@example.com" // Required, string
-    }
-    ```
--   **Success Response (`200 OK`):** `{ "success": true }`.
+-   **Error Responses:**
+    -   `400 Bad Request`: If `currentPassword` is incorrect or `newPassword` is too short.
+    -   `401 Unauthorized`: If the user is not authenticated (missing or invalid JWT).
 
 ---
+
+## Password Reset Workflow (100% API)
+
+This workflow is fully decoupled. The user will only interact with your frontend application; the backend provides the necessary API endpoints.
+
+### Step 1: User requests a password reset
+
+The user enters their email in the frontend, which calls the API.
+
+#### POST `/api/auth/forgot-password`
+-   **Description:** Initiates the password reset process by sending an email.
+-   **Permissions:** Public.
+-   **Request Body:**
+    ```json
+    {
+      "email": "user.who.forgot@example.com"
+    }
+    ```
+-   **Success Response (`200 OK`):**
+    ```json
+    {
+      "success": true
+    }
+    ```
+    *The API sends an email containing a link like `https://your-frontend-app.com/reset-password?token=a1b2c3d4...`*
+
+### Step 2: User clicks the link and arrives on the Frontend
+
+The user opens their email and clicks the link. Their browser opens your frontend application at the specified URL (e.g., `/reset-password`).
+
+### Step 3: Frontend displays the form and sends the new password to the API
+
+Your frontend page at `/reset-password` must:
+1.  Extract the `token` from the URL's query parameters.
+2.  Display a form with "New Password" and "Confirm Password" fields.
+3.  When the user submits this form, send the `token` and the `newPassword` to the backend API.
+
+#### POST `/api/auth/reset-password`
+-   **Description:** Sets a new password for a user using the token.
+-   **Permissions:** Public.
+-   **Request Body:**
+    ```json
+    {
+      "token": "a1b2c3d4-e5f6-4a1b-9c8d-ef0a1b2c3d4e",
+      "newPassword": "my_brand_new_password"
+    }
+    ```
+-   **Validation Rules:** `newPassword` must be at least 8 characters long.
+-   **Success Response (`200 OK`):**
+    ```json
+    {
+      "success": true,
+      "message": "Password has been reset successfully."
+    }
+    ```
+-   **Error Response (`400 Bad Request`):**
+    ```json
+    {
+      "success": false,
+      "message": "Invalid or expired token."
+    }
+    ```
+
+### Step 4: Frontend displays the final result
+
+Based on the API's JSON response (`success: true` or `success: false`), your frontend application displays the appropriate success or error message to the user and provides a link to the login page.
+
+### POST `/api/auth/reset-password`
+
+-   **Description:** Sets a new password for a user using the token they received via the "forgot password" email.
+-   **Permissions:** Public.
+-   **Request Body:**
+    ```json
+    {
+      "token": "a1b2c3d4-e5f6-4a1b-9c8d-ef0a1b2c3d4e",
+      "newPassword": "my_brand_new_password"
+    }
+    ```
+-   **Validation Rules:**
+    -   `token` (string, **required**): The reset token from the email.
+    -   `newPassword` (string, **required**): The user's new password (min. 8 characters).
+-   **Success Response (`200 OK`):**
+    ```json
+    {
+      "success": true
+    }
+    ```
+-   **Error Responses:**
+    -   `400 Bad Request`: If the token is invalid, expired, or not found.
+
+---
+
+### POST `/api/auth/verify-email`
+
+-   **Description:** Verifies a user's email address using the token sent to them upon registration.
+-   **Permissions:** Public.
+-   **Request Body:**
+    ```json
+    {
+      "token": "f1g2h3j4-k5l6-4m1n-9o8p-qrstuvwxyza"
+    }
+    ```
+-   **Validation Rules:**
+    -   `token` (string, **required**): The verification token from the email.
+-   **Success Response (`200 OK`):**
+    ```json
+    {
+      "success": true
+    }
+    ```
+-   **Error Responses:**
+    -   `400 Bad Request`: If the token is invalid or not found.
+
+---
+
+### POST `/api/auth/resend-verification`
+
+-   **Description:** Resends the email verification link to a user who has not yet verified their email address.
+-   **Permissions:** Public.
+-   **Request Body:**
+    ```json
+    {
+      "email": "unverified.user@example.com"
+    }
+    ```
+-   **Validation Rules:**
+    -   `email` (string, **required**): The email address to which the verification link should be resent.
+-   **Success Response (`200 OK`):**
+    ```json
+    {
+      "success": true
+    }
+    ```
+    *Note: The response is **always** successful for security reasons, regardless of whether the email exists or is already verified.*
 
 ## User Profile Management
 
