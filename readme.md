@@ -833,7 +833,7 @@ Routes for managing user profiles.
 | `GET`    | `/api/users`          | List all users (Admin/Helpdesk).           |
 | `GET`    | `/api/users/{id}`     | Get a specific user's public profile.      |
 | `PUT`    | `/api/users/{id}`     | Update a user's profile.                   |
-| `DELETE` | `/api/users/{id}`     | Delete a user (Admin).                     |
+| `DELETE` | `/api/users/{id}`     | Delete a user.                     |
 
 ### Patient-Specific Health Data
 
