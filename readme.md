@@ -33,10 +33,43 @@ This documentation outlines the available endpoints for managing users and authe
   - [DELETE `/api/users/{id}`](#delete-apiusersid)
 - [Special Case: Mandatory Password Change](#special-case-mandatory-password-change)
   - [Frontend Workflow](#frontend-workflow)
-- [Full Route List Summary](#full-route-list-summary)
-  - [Authentication \& Account Management](#authentication--account-management)
+- [User Health Data Endpoints](#user-health-data-endpoints)
+  - [1. Get Last Consultation](#1-get-last-consultation)
+    - [Authorization](#authorization)
+    - [URL Parameters](#url-parameters)
+    - [Success Response](#success-response)
+    - [Error Responses](#error-responses)
+  - [2. Get Vital Signs Summary](#2-get-vital-signs-summary)
+    - [Authorization](#authorization-1)
+    - [URL Parameters](#url-parameters-1)
+    - [Success Response](#success-response-1)
+    - [Error Responses](#error-responses-1)
+  - [3. Get Vital Signs History](#3-get-vital-signs-history)
+    - [Authorization](#authorization-2)
+    - [URL Parameters](#url-parameters-2)
+    - [Success Response](#success-response-2)
+    - [Error Responses](#error-responses-2)
+  - [3. Get All Consultations for a User](#3-get-all-consultations-for-a-user)
+    - [Authorization](#authorization-3)
+    - [URL Parameters](#url-parameters-3)
+    - [Success Response](#success-response-3)
+    - [Error Responses](#error-responses-3)
+  - [4. Get Last Consultation for a User](#4-get-last-consultation-for-a-user)
+    - [Authorization](#authorization-4)
+    - [URL Parameters](#url-parameters-4)
+    - [Success Response](#success-response-4)
+    - [Error Responses](#error-responses-4)
+  - [Patient Self-Reported Logs](#patient-self-reported-logs)
+    - [A. Pain Logs](#a-pain-logs)
+      - [1. List Pain Logs for a User](#1-list-pain-logs-for-a-user)
+      - [2. Create a Pain Log for a User](#2-create-a-pain-log-for-a-user)
+      - [3. Get a Specific Pain Log](#3-get-a-specific-pain-log)
+      - [4. Update a Pain Log](#4-update-a-pain-log)
+      - [5. Delete a Pain Log](#5-delete-a-pain-log)
+    - [B. Mood Logs](#b-mood-logs)
+- [Route Summary](#route-summary)
   - [User \& Profile](#user--profile)
-  - [Patient-Specific Medical Data](#patient-specific-medical-data)
+  - [Patient-Specific Health Data](#patient-specific-health-data)
   - [Appointments](#appointments)
   - [Technical \& Other](#technical--other)
   - [Address \& Geolocation Endpoints](#address--geolocation-endpoints)
@@ -370,12 +403,418 @@ Absolument. Voici la section `Full Route List Summary` complète, mise à jour p
 
 ---
 
-## Full Route List Summary
+Of course. Here is professional, well-structured API documentation in Markdown format (and in English) for the new endpoints you've created.
 
-### Authentication & Account Management
+You can copy and paste this directly into your `README.md` or a dedicated `API_DOCUMENTATION.md` file.
+
+---
+
+## User Health Data Endpoints
+### 1. Get Last Consultation
+
+Retrieves the full details of the most recent consultation for a specific user.
+
+`GET /api/users/{id}/last_consultation`
+
+#### Authorization
+
+*   Requires authentication.
+*   A standard user can only access their own consultation data (`object == user`).
+
+#### URL Parameters
+
+| Parameter | Type    | Description              |
+| :-------- | :------ | :----------------------- |
+| `id`      | Integer | **Required.** The ID of the user. |
+
+#### Success Response
+
+*   **Code:** `200 OK`
+*   **Content:** A single `Consultation` object containing details of the last visit.
+
+**Example Response:**
+```json
+{
+    "@context": "/api/contexts/Consultation",
+    "@id": "/api/consultations/152",
+    "@type": "Consultation",
+    "id": 152,
+    "createdAt": "2024-05-21T14:30:00+00:00",
+    "reason": "Follow-up checkup",
+    "weight": "75.5",
+    "temperature": "37.1",
+    "consultBy": {
+        "@id": "/api/users/5",
+        "@type": "User",
+        "fullName": "Dr. Alice Martin"
+    },
+    "monitoringVitalSigns": [
+        {
+            "@id": "/api/vital_signs/310",
+            "@type": "VitalSign",
+            "weight": "75.6"
+        }
+    ]
+}
+```
+
+#### Error Responses
+
+*   **Code:** `401 Unauthorized`
+    *   **Reason:** Missing or invalid authentication token.
+*   **Code:** `403 Forbidden`
+    *   **Reason:** The authenticated user is trying to access another user's data without administrative privileges.
+*   **Code:** `404 Not Found`
+    *   **Reason:** The user with the specified `id` does not exist, or they have no consultations.
+
+---
+
+### 2. Get Vital Signs Summary
+
+Retrieves a summary of the vital signs from the user's most recent consultation. This is a composite object that includes both the primary vital signs and any additional monitoring signs recorded.
+
+`GET /api/users/{id}/vital_signs_summary`
+
+#### Authorization
+
+*   Requires authentication.
+*   A standard user can only access their own data.
+*   An administrator (`ROLE_ADMIN`) can access any user's data.
+
+#### URL Parameters
+
+| Parameter | Type    | Description              |
+| :-------- | :------ | :----------------------- |
+| `id`      | Integer | **Required.** The ID of the user. |
+
+#### Success Response
+
+*   **Code:** `200 OK`
+*   **Content:** A single `VitalSignsSummaryDto` object.
+
+**Example Response:**
+```json
+{
+    "@context": "/api/contexts/VitalSignsSummaryDto",
+    "@id": "/api/users/42/vital_signs_summary",
+    "@type": "VitalSignsSummaryDto",
+    "weight": "75.5",
+    "temperature": "37.1",
+    "cardiacFrequency": "80",
+    "respiratoryRate": "16",
+    "oxygenSaturation": "98",
+    "bloodPressureUp": "120",
+    "bloodPressureDown": "80",
+    "pulsation": "80",
+    "size": 180,
+    "bloodSugar": "95",
+    "headCircumference": null,
+    "armCircumference": 32,
+    "comment": "Patient feels well.",
+    "monitoringVitalSigns": []
+}
+```
+
+#### Error Responses
+
+*   **Code:** `401 Unauthorized`
+*   **Code:** `403 Forbidden`
+*   **Code:** `404 Not Found`
+
+---
+
+### 3. Get Vital Signs History
+
+Retrieves a chronological history of a user's vital signs, collected from all their past consultations. This endpoint is optimized for building charts and graphs.
+
+`GET /api/users/{id}/vital_signs_history`
+
+#### Authorization
+
+*   Requires authentication.
+*   A standard user can only access their own data.
+*   An administrator (`ROLE_ADMIN`) can access any user's data.
+
+#### URL Parameters
+
+| Parameter | Type    | Description              |
+| :-------- | :------ | :----------------------- |
+| `id`      | Integer | **Required.** The ID of the user. |
+
+#### Success Response
+
+*   **Code:** `200 OK`
+*   **Content:** An array of `VitalSignDataPointDto` objects, sorted by date in ascending order. If the user has no consultations, an empty array `[]` is returned.
+
+**Example Response:**
+```json
+[
+    {
+        "date": "2024-01-15T10:00:00+00:00",
+        "weight": "76.0",
+        "temperature": "37.0",
+        "cardiacFrequency": "82",
+        "respiratoryRate": "16",
+        "oxygenSaturation": "97",
+        "bloodPressureUp": "122",
+        "bloodPressureDown": "81",
+        "pulsation": "82",
+        "size": 180,
+        "bloodSugar": null,
+        "headCircumference": null,
+        "armCircumference": 32
+    },
+    {
+        "date": "2024-05-21T14:30:00+00:00",
+        "weight": "75.5",
+        "temperature": "37.1",
+        "cardiacFrequency": "80",
+        "respiratoryRate": "16",
+        "oxygenSaturation": "98",
+        "bloodPressureUp": "120",
+        "bloodPressureDown": "80",
+        "pulsation": "80",
+        "size": 180,
+        "bloodSugar": "95",
+        "headCircumference": null,
+        "armCircumference": 32
+    }
+]
+```
+
+#### Error Responses
+
+*   **Code:** `401 Unauthorized`
+*   **Code:** `403 Forbidden`
+*   **Note:** This endpoint does not return `404 Not Found`. If the user exists but has no consultations, it will return `200 OK` with an empty array.
+  
+
+  Of course. Here is the Markdown documentation in English for those two specific routes. It's designed to be clear, concise, and easy for any developer on your team to understand.
+
+This documentation accurately reflects the security rules and expected output for each endpoint based on the code you provided.
+
+---
+
+### 3. Get All Consultations for a User
+
+Retrieves a list of all past consultations for a specific user. The consultations are returned as a collection.
+
+`GET /api/users/{id}/consultations`
+
+#### Authorization
+
+*   Requires authentication.
+*   A user can **only** access their own list of consultations. Attempting to access another user's consultations will result in a `403 Forbidden` error.
+*   **Note:** Unlike other endpoints, administrators do not have special access to this route and are also bound by this rule.
+
+#### URL Parameters
+
+| Parameter | Type    | Description              |
+| :-------- | :------ | :----------------------- |
+| `id`      | Integer | **Required.** The ID of the user. |
+
+#### Success Response
+
+*   **Code:** `200 OK`
+*   **Content:** An array of `Consultation` objects. If the user has no consultations, an empty array `[]` is returned.
+
+**Example Response:**
+```json
+[
+    {
+        "@id": "/api/consultations/152",
+        "@type": "Consultation",
+        "id": 152,
+        "createdAt": "2024-05-21T14:30:00+00:00",
+        "reason": "Follow-up checkup"
+    },
+    {
+        "@id": "/api/consultations/119",
+        "@type": "Consultation",
+        "id": 119,
+        "createdAt": "2024-01-15T10:00:00+00:00",
+        "reason": "Initial consultation"
+    }
+]
+```
+
+#### Error Responses
+
+*   **Code:** `401 Unauthorized`
+    *   **Reason:** Missing or invalid authentication token.
+*   **Code:** `403 Forbidden`
+    *   **Reason:** The authenticated user's ID does not match the `{id}` in the URL.
+*   **Code:** `404 Not Found`
+    *   **Reason:** The user with the specified `id` does not exist.
+
+---
+
+### 4. Get Last Consultation for a User
+
+Retrieves the full details of the **most recent** consultation for a specific user. This endpoint uses a custom provider to find the latest record.
+
+`GET /api/users/{id}/last_consultation`
+
+#### Authorization
+
+*   Requires authentication.
+*   A standard user can only access their own consultation data.
+*   An administrator (`ROLE_ADMIN`) can access any user's consultation data.
+
+#### URL Parameters
+
+| Parameter | Type    | Description              |
+| :-------- | :------ | :----------------------- |
+| `id`      | Integer | **Required.** The ID of the user. |
+
+#### Success Response
+
+*   **Code:** `200 OK`
+*   **Content:** A single `Consultation` object containing the details of the last visit.
+
+**Example Response:**
+```json
+{
+    "@context": "/api/contexts/Consultation",
+    "@id": "/api/consultations/152",
+    "@type": "Consultation",
+    "id": 152,
+    "createdAt": "2024-05-21T14:30:00+00:00",
+    "reason": "Follow-up checkup",
+    "weight": "75.5",
+    "temperature": "37.1",
+    "consultBy": {
+        "@id": "/api/users/5",
+        "@type": "User",
+        "fullName": "Dr. Alice Martin"
+    }
+}
+```
+
+#### Error Responses
+
+*   **Code:** `401 Unauthorized`
+    *   **Reason:** Missing or invalid authentication token.
+*   **Code:** `403 Forbidden`
+    *   **Reason:** The authenticated user is trying to access another user's data without administrative privileges.
+*   **Code:** `404 Not Found`
+    *   **Reason:** The user with the specified `id` does not exist, or they have no recorded consultations.
+  
+Of course. Here is the complete, merged API documentation in a single, well-organized summary.
+
+I have integrated all the previous tables and added the new routes we created (`vital_signs_summary` and `vital_signs_history`), refining the descriptions for clarity.
+
+---
+
+Of course. Here is the documentation section for the new CRUD routes, written in English and formatted in Markdown.
+
+This section is designed to be added to your existing API documentation. It covers all the operations for both `PainLog` and `MoodLog`, explaining how the subresources and direct resource routes work together.
+
+---
+
+### Patient Self-Reported Logs
+#### A. Pain Logs
+
+Full CRUD operations for managing a patient's pain log entries.
+
+##### 1. List Pain Logs for a User
+
+Retrieves a collection of all pain logs for a specific user.
+
+`GET /api/users/{id}/pain_logs`
+
+*   **Authorization:** A user can view their own logs. An administrator can view any user's logs.
+*   **URL Parameters:**
+    *   `id` (string, UUID): **Required.** The ID of the user.
+*   **Success Response (`200 OK`):** An array of `PainLog` objects. Returns an empty array `[]` if the user has no logs.
+
+##### 2. Create a Pain Log for a User
+
+Creates a new pain log entry for a specific user. The `patient` is automatically assigned based on the URL.
+
+`POST /api/users/{id}/pain_logs`
+
+*   **Authorization:** A user can create a log for themselves. An administrator can create a log for any user.
+*   **URL Parameters:**
+    *   `id` (string, UUID): **Required.** The ID of the user for whom the log is being created.
+*   **Request Body:** A JSON object representing the `PainLog`.
+
+| Field             | Type      | Required | Description                                                |
+| :---------------- | :-------- | :------- | :--------------------------------------------------------- |
+| `level`           | Integer   | Yes      | Pain intensity, from 0 to 10.                              |
+| `description`     | String    | No       | Location, type, or other details about the pain.           |
+| `medicationTaken` | Boolean   | No       | `true` if medication was taken for this pain. Defaults to `false`. |
+| `medicationName`  | String    | No       | The name of the medication, if `medicationTaken` is `true`.  |
+| `loggedAt`        | String    | Yes      | The date and time the pain was felt. (ISO 8601 format, e.g., `2024-05-22T08:00:00Z`) |
+
+**Example Body:**
+```json
+{
+  "level": 7,
+  "description": "Sharp pain in lower back after lifting.",
+  "medicationTaken": true,
+  "medicationName": "Ibuprofen 400mg",
+  "loggedAt": "2024-05-22T08:00:00Z"
+}
+```
+*   **Success Response (`201 Created`):** The newly created `PainLog` object.
+*   **Error Response (`422 Unprocessable Entity`):** If validation fails (e.g., `level` is out of range).
+
+##### 3. Get a Specific Pain Log
+
+Retrieves a single pain log entry by its own unique ID.
+
+`GET /api/pain_logs/{log_id}`
+
+*   **Authorization:** The user must be the owner of the log or an administrator.
+*   **URL Parameters:**
+    *   `log_id` (string, UUID): **Required.** The ID of the `PainLog` itself.
+
+##### 4. Update a Pain Log
+
+Updates an existing pain log entry.
+
+`PUT /api/pain_logs/{log_id}`
+
+*   **Authorization:** The user must be the owner of the log or an administrator.
+*   **URL Parameters:**
+    *   `log_id` (string, UUID): **Required.** The ID of the `PainLog` to update.
+*   **Request Body:** A JSON object with the fields to be updated.
+
+##### 5. Delete a Pain Log
+
+Deletes a pain log entry.
+
+`DELETE /api/pain_logs/{log_id}`
+
+*   **Authorization:** The user must be the owner of the log or an administrator.
+*   **URL Parameters:**
+    *   `log_id` (string, UUID): **Required.** The ID of the `PainLog` to delete.
+*   **Success Response (`204 No Content`):** The log was successfully deleted.
+
+---
+
+#### B. Mood Logs
+
+The API for Mood Logs follows the **exact same structure and logic** as Pain Logs.
+
+*   Simply replace `/pain_logs` with `/mood_logs` in the endpoints.
+*   The request and response bodies will use the fields defined in the `MoodLog` entity (e.g., `mood`, `triggers`, `notes`).
+
+**Example Routes:**
+*   `GET /api/users/{id}/mood_logs`
+*   `POST /api/users/{id}/mood_logs`
+*   `GET /api/mood_logs/{log_id}`
+*   `PUT /api/mood_logs/{log_id}`
+*   `DELETE /api/mood_logs/{log_id}`
+
+## Route Summary
+
+Routes for user registration, login, and password management.
+
 | Method | Path                               | Description                               |
-|--------|------------------------------------|-------------------------------------------|
-| `POST` | `/api/login`                 | Log in a user (get JWT).                  |
+| :---   | :--------------------------------- | :---------------------------------------- |
+| `POST` | `/api/login`                       | Log in a user to obtain a JWT.            |
 | `POST` | `/api/auth/register`               | Register a new user account.              |
 | `POST` | `/api/users/{id}/change-password`  | Change password while logged in.          |
 | `POST` | `/api/auth/forgot-password`        | Request a password reset email.           |
@@ -385,34 +824,46 @@ Absolument. Voici la section `Full Route List Summary` complète, mise à jour p
 | `POST` | `/api/auth/logout`                 | Log out (client-side token removal).      |
 
 ### User & Profile
-| Method | Path                               | Description                               |
-|--------|------------------------------------|-------------------------------------------|
-| `GET`  | `/api/users/profil`                | Get the current authenticated user's profile.|
-| `GET`  | `/api/users`                       | List all users (Admin/Helpdesk).          |
-| `GET`  | `/api/users/{id}`                  | Get a specific user's public profile.     |
-| `PUT`  | `/api/users/{id}`                  | Update a user's profile.                  |
-| `DELETE`| `/api/users/{id}`                 | Delete a user (Admin).                    |
 
-### Patient-Specific Medical Data
-| Method | Path                               | Description                               |
-|--------|------------------------------------|-------------------------------------------|
-| `GET`  | `/api/users/{id}/consultations`    | List all consultations for a patient.     |
-| `GET`  | `/api/users/{id}/last_consultation`| Get the patient's last consultation.      |
-| `GET`  | `/api/users/{id}/vital_signs_summary`| Get a summary of the patient's vital signs.|
-| `POST` | `/api/users/{id}/pain_logs`        | Add a new pain log entry for the patient. |
-| `POST` | `/api/users/{id}/mood_logs`        | Add a new mood log entry for the patient. |
+Routes for managing user profiles.
+
+| Method   | Path                  | Description                                |
+| :---     | :-------------------- | :----------------------------------------- |
+| `GET`    | `/api/users/profil`   | Get the current authenticated user's profile.|
+| `GET`    | `/api/users`          | List all users (Admin/Helpdesk).           |
+| `GET`    | `/api/users/{id}`     | Get a specific user's public profile.      |
+| `PUT`    | `/api/users/{id}`     | Update a user's profile.                   |
+| `DELETE` | `/api/users/{id}`     | Delete a user (Admin).                     |
+
+### Patient-Specific Health Data
+
+Routes for accessing a user's personal medical records. The `{id}` always refers to the patient's ID.
+
+| Method | Path                                  | Description                                           |
+| :---   | :------------------------------------ | :---------------------------------------------------- |
+| `GET`  | `/api/users/{id}/consultations`       | List all consultations for a patient.                 |
+| `GET`  | `/api/users/{id}/last_consultation`   | Get the patient's most recent consultation.           |
+| `GET`  | `/api/users/{id}/vital_signs_summary` | Get vital signs summary from the last consultation.   |
+| `GET`  | `/api/users/{id}/vital_signs_history` | Retrieve historical vital signs data for charting.    |
+| `GET` | `/api/users/{id}/pain_logs`            | show pain logs for the patient.                       |
+| `POST` | `/api/users/{id}/pain_logs`           | Add a new pain log entry for the patient.             |
 
 ### Appointments
-| Method | Path                               | Description                               |
-|--------|------------------------------------|-------------------------------------------|
-| `GET`  | `/api/users/{id}/appointments`     | List all appointments for a patient.      |
-| `POST` | `/api/users/{id}/request_appointment`| Request a new appointment for a patient.|
+
+Routes for managing patient appointments.
+
+| Method | Path                                  | Description                               |
+| :---   | :------------------------------------ | :---------------------------------------- |
+| `GET`  | `/api/users/{id}/appointments`        | List all appointments for a patient.      |
+| `POST` | `/api/users/{id}/request_appointment` | Request a new appointment for a patient.  |
 
 ### Technical & Other
-| Method | Path                               | Description                               |
-|--------|------------------------------------|-------------------------------------------|
-| `GET`  | `/api/users/wallet/{id}`           | Get a user's wallet (Developer).          |
 
+Internal or developer-specific routes.
+
+| Method | Path                     | Description                      |
+| :---   | :----------------------- | :------------------------------- |
+| `GET`  | `/api/users/wallet/{id}` | Get a user's wallet (Developer). |
 
 ---
 
