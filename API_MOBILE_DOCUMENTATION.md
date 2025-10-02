@@ -4,7 +4,7 @@
 
 Cette documentation décrit les APIs disponibles pour l'application mobile de gestion des ressources humaines. Les APIs sont construites avec API Platform et suivent les standards REST.
 
-**Base URL:** `https://votre-domaine.com/api`
+**Base URL:** `https://hr.healthcarology.org/api`
 
 **Format de réponse:** JSON
 
@@ -724,7 +724,7 @@ curl -X GET "https://hr.healthcarology.org/api/mobile/payslips?year=2025" \
         "amount": 82500
       }
     ],
-    "pdfUrl": "https://votre-domaine.com/finance/payroll/01923456-7890-7c7e-9b4f-123456789abc/pdf"
+    "pdfUrl": "https://hr.healthcarology.org/finance/payroll/01923456-7890-7c7e-9b4f-123456789abc/pdf"
   }
 ]
 ```
@@ -838,7 +838,7 @@ curl -X GET https://hr.healthcarology.org/api/mobile/payslips/01923456-7890-7c7e
       "amount": 82500
     }
   ],
-  "pdfUrl": "https://votre-domaine.com/finance/payroll/01923456-7890-7c7e-9b4f-123456789abc/pdf"
+  "pdfUrl": "https://hr.healthcarology.org/finance/payroll/01923456-7890-7c7e-9b4f-123456789abc/pdf"
 }
 ```
 
@@ -863,7 +863,7 @@ Authorization: Bearer {token}
 
 **Exemple:**
 ```http
-GET https://votre-domaine.com/finance/payroll/01923456-7890-7c7e-9b4f-123456789abc/pdf
+GET https://hr.healthcarology.org/finance/payroll/01923456-7890-7c7e-9b4f-123456789abc/pdf
 ```
 
 **Exemple avec curl (téléchargement):**
