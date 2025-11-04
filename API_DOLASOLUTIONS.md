@@ -276,8 +276,11 @@ curl -X POST https://dolasolutions.com/api/v1/login \
 
 **Renouvellement du token** - Obtenez un nouveau JWT token avec votre refresh token.
 
-**URL:** `POST /api/v1/refresh`  
+**URL:** `POST /api/v1/refresh`
 **Authentification:** Non requise
+**ApiResource:** `App\ApiResource\V1\RefreshTokenResource`
+**Controller:** `gesdinet.jwtrefreshtoken::refresh` (Gesdinet JWTRefreshTokenBundle)
+**Entity:** `App\Entity\User\RefreshToken`
 
 **Paramètres du body (JSON):**
 ```json
@@ -291,26 +294,56 @@ curl -X POST https://dolasolutions.com/api/v1/login \
 curl -X POST https://dolasolutions.com/api/v1/refresh \
   -H "Content-Type: application/json" \
   -d '{
-    "refresh_token": "5a3f8b9c2e1d4f6a7b8c9d0e1f2a3b4c..."
+    "refresh_token": "5a3f8b9c2e1d4f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c"
   }'
 ```
 
 **Réponse (200 OK):**
 ```json
 {
-  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
-  "refresh_token": "5a3f8b9c2e1d4f6a7b8c9d0e1f2a3b4c...",
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE2OTczNzI4MDAsImV4cCI6MTcyODk3MjgwMCwicm9sZXMiOlsiUk9MRV9VU0VSIl0sInVzZXJuYW1lIjoidXNlckBleGFtcGxlLmNvbSJ9...",
+  "refresh_token": "5a3f8b9c2e1d4f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c",
   "refresh_token_expiration": 1729513200
 }
 ```
 
+**Champs de réponse:**
+- `token` (string): Nouveau JWT token valide pour 1 année (31,536,000 secondes)
+- `refresh_token` (string): Refresh token renouvelé avec 30 jours supplémentaires (si `ttl_update` activé)
+- `refresh_token_expiration` (integer): Timestamp Unix d'expiration du refresh token
+
+**Configuration du bundle:**
+```yaml
+gesdinet_jwt_refresh_token:
+    ttl: 2592000              # 30 jours en secondes
+    ttl_update: true          # Renouvelle automatiquement le TTL à chaque utilisation
+    token_parameter_name: refresh_token
+    return_expiration: true
+    return_expiration_parameter_name: refresh_token_expiration
+    single_use: false         # Les tokens peuvent être réutilisés
+```
+
+**Configuration JWT:**
+```yaml
+lexik_jwt_authentication:
+    token_ttl: 31536000      # 1 année en secondes (token JWT)
+```
+
+**Sécurité:**
+- Endpoint **public** (pas d'authentification requise)
+- Firewall dédié: `api_refresh` avec security: false
+- Access Control: `PUBLIC_ACCESS`
+
 **Notes:**
-- Le refresh token est automatiquement renouvelé (30 jours supplémentaires)
-- Si utilisé régulièrement, la session peut être maintenue indéfiniment
+- Le refresh token a une durée de vie de **30 jours**
+- Le JWT token a une durée de vie de **1 année**
+- Le refresh token est automatiquement renouvelé avec 30 jours supplémentaires à chaque utilisation
+- Si utilisé régulièrement, la session peut être maintenue **indéfiniment**
+- Les tokens peuvent être réutilisés (`single_use: false`)
 
 **Erreurs possibles:**
-- `400 Bad Request`: Refresh token manquant
-- `401 Unauthorized`: Refresh token invalide ou expiré
+- `400 Bad Request`: Refresh token manquant ou format invalide (code: 400, message: "Refresh token is required")
+- `401 Unauthorized`: Refresh token invalide, expiré ou révoqué (code: 401, message: "Invalid refresh token")
 
 ---
 
