@@ -1,25 +1,26 @@
 # Documentation API V1 - Pour l'équipe Frontend
 
-**URL de base:** `https://hr.healthcarology.org/api/v1`  
-**Documentation interactive:** https://hr.healthcarology.org/api/docs
+**URL de base:** `https://dolasolutions.com/api/v1`  
+**Documentation interactive:** https://dolasolutions.com/api/docs
 
 Cette documentation détaille tous les endpoints, paramètres, et exemples pour intégrer l'API dans votre application frontend.
 
 ## Table des matières
 
 1. [Vue d'ensemble des routes](#vue-densemble-des-routes)
-2. [Authentification](#authentification)
-3. [Profil utilisateur](#profil-utilisateur)
-4. [Utilisateurs](#utilisateurs)
-5. [Contrats](#contrats)
-6. [Présences](#présences)
-7. [Fiches de paie](#fiches-de-paie)
-8. [Congés](#congés)
-9. [Rapports de temps](#rapports-de-temps)
-10. [Données géographiques](#données-géographiques)
-11. [Pagination](#pagination)
-12. [Gestion des erreurs](#gestion-des-erreurs)
-13. [Exemples de code](#exemples-de-code)
+2. [Architecture API Platform](#architecture-api-platform)
+3. [Authentification](#authentification)
+4. [Profil utilisateur](#profil-utilisateur)
+5. [Utilisateurs](#utilisateurs)
+6. [Contrats](#contrats)
+7. [Présences](#présences)
+8. [Fiches de paie](#fiches-de-paie)
+9. [Congés](#congés)
+10. [Rapports de temps](#rapports-de-temps)
+11. [Données géographiques](#données-géographiques)
+12. [Pagination](#pagination)
+13. [Gestion des erreurs](#gestion-des-erreurs)
+14. [Exemples de code](#exemples-de-code)
 
 ---
 
@@ -108,9 +109,9 @@ Cette documentation détaille tous les endpoints, paramètres, et exemples pour 
 | `GET` | `/api/v1/addresses` | Liste des adresses | `page, itemsPerPage` | - | JWT |
 | `GET` | `/api/v1/addresses/{id}` | Détails d'une adresse | `id` (path) | - | JWT |
 
-**Total : 39 routes**
+**Total : 40+ routes**
 - 2 routes publiques (authentification)
-- 37 routes protégées (JWT requis)
+- 38+ routes protégées (JWT requis)
 
 **Légende :**
 - `?` : Paramètre optionnel
@@ -119,16 +120,70 @@ Cette documentation détaille tous les endpoints, paramètres, et exemples pour 
 
 ---
 
+## Architecture API Platform
+
+L'API est construite avec **API Platform 4.0** en utilisant une architecture resource-based modulaire.
+
+### Structure des ressources
+
+**Localisation des ApiResource:**
+- `/src/ApiResource/V1/` - Toutes les configurations des ressources API
+- `/src/State/Provider/` - Custom State Providers (GET operations)
+- `/src/State/Processor/` - Custom State Processors (POST/PUT/PATCH operations)
+- `/src/Dto/` - Data Transfer Objects pour les inputs/outputs
+
+### Fonctionnalités principales
+
+1. **Type-safe DTOs** - Utilisation de DTOs pour les inputs et outputs
+2. **Custom State Management** - Providers et Processors pour la logique métier complexe
+3. **OpenAPI/Swagger Documentation** - Documentation automatique et interactive à `/api/docs`
+4. **Pagination Hydra** - Pagination standard via hydra:member, hydra:totalItems, hydra:view
+5. **Filtres avancés** - SearchFilter, DateFilter, OrderFilter, RangeFilter
+6. **Sécurité JWT** - Token-based authentication avec refresh token
+7. **Groupes de sérialisation** - Contrôle fin des champs dans les réponses
+
+### Configuration par défaut
+
+```
+- Pagination: 30 items/page (max 100)
+- Format réponse: JSON-LD avec Hydra
+- Authentification: JWT Bearer token
+- Ordre par défaut: DESC pour les timestamps/dates
+```
+
+### Custom State Providers (pour les GET)
+
+| Class | Ressource | Logique |
+|-------|-----------|---------|
+| `PresenceCollectionProvider` | `/presences` | Filtre les présences de l'agent connecté, supporte filtrage par month/year |
+| `PresenceItemProvider` | `/presences/{id}` | Charge une présence spécifique avec vérification de propriété |
+| `PayslipCollectionProvider` | `/payslips` | Filtre les fiches de paie de l'agent connecté, génère URLs PDF, supporte month/year |
+| `PayslipItemProvider` | `/payslips/{id}` | Charge une fiche de paie avec propriété vérifiée, génère URL PDF |
+| `MeProvider` | `/me` | Retourne le profil de l'agent authentifié avec services et contrats |
+
+### Custom State Processors (pour POST/PUT/PATCH)
+
+| Class | Ressource | Logique |
+|-------|-----------|---------|
+| `CheckinProcessor` | `POST /presences/checkin` | Valide pointage selon règles métier, vérifie localisation, crée Presence |
+| `LoginProcessor` | `POST /login` | Authentifie utilisateur (email/username/phone), génère JWT + refresh token |
+| `LeaveProcessor` | `POST/PATCH /leaves` | Associe congé à agent connecté, définit statut = PENDING |
+| `TimeReportProcessor` | `POST/PUT/PATCH /time-reports` | Associe rapport à agent, calcule durée en minutes |
+
+---
+
 ## Authentification
 
 ### 🔓 POST /api/v1/login
 
-**Authentification initiale** - Obtenez votre token JWT et refresh token.
+**Authentification initiale** - Authentification flexible avec JWT et refresh token.
 
-**URL:** `POST /api/v1/login`  
+**URL:** `POST /api/v1/login`
 **Authentification:** Non requise
+**ApiResource:** `App\ApiResource\V1\LoginResource`
+**Processor:** `App\State\Processor\LoginProcessor`
 
-**Paramètres du body (JSON):**
+**Paramètres du body (JSON) - LoginInputDto:**
 ```json
 {
   "username": "string (requis)",
@@ -138,49 +193,82 @@ Cette documentation détaille tous les endpoints, paramètres, et exemples pour 
 
 **Champs username acceptés:**
 - Email: `user@example.com`
-- Username: `john.doe`
+- Nom d'utilisateur: `john.doe`
 - Téléphone: `+243991234567`
 
 **Exemple de requête:**
 ```bash
-curl -X POST https://hr.healthcarology.org/api/v1/login \
+curl -X POST https://dolasolutions.com/api/v1/login \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "user@example.com",
+    "username": "kabongo@example.com",
     "password": "mypassword123"
   }'
 ```
 
-**Réponse (200 OK):**
+**Réponse (200 OK) - LoginOutputDto:**
 ```json
 {
   "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
-  "refreshToken": "5a3f8b9c2e1d4f6a7b8c9d0e1f2a3b4c...",
-  "userId": 123,
-  "email": "user@example.com",
-  "fullname": "John Doe",
-  "service": "IT",
+  "userId": 42,
+  "email": "kabongo@example.com",
+  "fullname": "KABONGO Jean Mukendi",
+  "service": "Service RH",
   "roles": ["ROLE_USER", "ROLE_AGENT"],
   "agent": {
-    "id": 456,
-    "firstname": "John",
-    "lastname": "Doe",
-    "matricule": "EMP001",
+    "id": 42,
+    "firstname": "Jean",
+    "lastname": "KABONGO",
+    "middlename": "Mukendi",
+    "fullname": "KABONGO Jean Mukendi",
+    "email": "kabongo@example.com",
+    "phoneNumber": "+243991234567",
+    "matricule": "AG2025001",
+    "service": {
+      "id": "01H2X3Y4Z5...",
+      "name": "Service RH"
+    },
     "company": {
-      "id": 1,
-      "name": "ACME Corp"
+      "id": "01H2X3Y4Z5...",
+      "name": "DOLASOLUTIONS SARL"
     }
-  }
+  },
+  "refreshToken": "5a3f8b9c2e1d4f6a7b8c9d0e1f2a3b4c..."
 }
 ```
+
+**Champs de réponse (LoginOutputDto):**
+- `token` (string): JWT token pour l'authentification aux requêtes protégées
+- `userId` (integer): ID de l'utilisateur
+- `email` (string): Email de l'utilisateur
+- `fullname` (string): Nom complet (prénom + nom + middlename)
+- `service` (string, nullable): Nom du service/département
+- `roles` (array): Liste des rôles de l'utilisateur [ROLE_USER, ROLE_AGENT, ROLE_DIRECTOR, ROLE_ADMIN, etc.]
+- `agent` (object, nullable): Données complètes de l'agent
+  - `id` (integer): ID de l'agent
+  - `firstname` (string): Prénom
+  - `lastname` (string): Nom
+  - `middlename` (string, nullable): Deuxième prénom
+  - `fullname` (string): Nom complet
+  - `email` (string): Email
+  - `phoneNumber` (string, nullable): Numéro de téléphone
+  - `matricule` (string, nullable): Matricule d'employé
+  - `service` (object, nullable): Service de l'agent
+    - `id` (string): UUID du service
+    - `name` (string): Nom du service
+  - `company` (object, nullable): Entreprise de l'agent
+    - `id` (string): UUID de l'entreprise
+    - `name` (string): Nom de l'entreprise
+- `refreshToken` (string, nullable): Token pour renouveler le JWT
 
 **Durée de vie:**
 - `token` (JWT): 1 année
 - `refreshToken`: 30 jours
+- `refreshToken` est renouvelé automatiquement sur chaque `/refresh`
 
 **Erreurs possibles:**
-- `400 Bad Request`: Paramètres manquants
-- `422 Unprocessable Entity`: Identifiants invalides
+- `400 Bad Request`: Identifiants invalides ou compte désactivé
+- `422 Unprocessable Entity`: Champs manquants ou invalides (email et password requis)
 
 ---
 
@@ -200,7 +288,7 @@ curl -X POST https://hr.healthcarology.org/api/v1/login \
 
 **Exemple de requête:**
 ```bash
-curl -X POST https://hr.healthcarology.org/api/v1/refresh \
+curl -X POST https://dolasolutions.com/api/v1/refresh \
   -H "Content-Type: application/json" \
   -d '{
     "refresh_token": "5a3f8b9c2e1d4f6a7b8c9d0e1f2a3b4c..."
@@ -236,7 +324,7 @@ Authorization: Bearer {votre_token_jwt}
 
 **Exemple:**
 ```bash
-curl -X GET https://hr.healthcarology.org/api/v1/users \
+curl -X GET https://dolasolutions.com/api/v1/users \
   -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
 ```
 
@@ -248,12 +336,15 @@ curl -X GET https://hr.healthcarology.org/api/v1/users \
 
 **Profil de l'utilisateur connecté** - Récupère les informations détaillées de l'utilisateur authentifié.
 
-**URL:** `GET /api/v1/me`  
-**Authentification:** JWT requis
+**URL:** `GET /api/v1/me`
+**Authentification:** JWT requis (ROLE_USER)
+**ApiResource:** `App\ApiResource\V1\MeOperationResource`
+**Provider:** `App\State\Provider\MeProvider`
+**Output DTO:** `App\Dto\User\MeOutputDto`
 
 **Exemple de requête:**
 ```bash
-curl -X GET "https://hr.healthcarology.org/api/v1/me" \
+curl -X GET "https://dolasolutions.com/api/v1/me" \
   -H "Authorization: Bearer {token}"
 ```
 
@@ -284,6 +375,19 @@ curl -X GET "https://hr.healthcarology.org/api/v1/me" \
 }
 ```
 
+**Champs de réponse (MeOutputDto):**
+- `id` (integer): ID de l'utilisateur
+- `firstname` (string): Prénom
+- `lastname` (string): Nom
+- `email` (string): Adresse email
+- `phoneNumber` (string, nullable): Numéro de téléphone
+- `matricule` (string, nullable): Matricule d'employé
+- `commitmentDate` (datetime, nullable): Date d'engagement
+- `service` (object, nullable): Informations du service
+  - `id` (integer): ID du service
+  - `name` (string): Nom du service
+- `contracts` (array): Liste des contrats associés à l'utilisateur
+
 ---
 
 ### GET /api/v1/agents/search
@@ -306,7 +410,7 @@ curl -X GET "https://hr.healthcarology.org/api/v1/me" \
 
 **Exemple de requête:**
 ```bash
-curl -X GET "https://hr.healthcarology.org/api/v1/agents/search?term=john&limit=5" \
+curl -X GET "https://dolasolutions.com/api/v1/agents/search?term=john&limit=5" \
   -H "Authorization: Bearer {token}"
 ```
 
@@ -366,7 +470,7 @@ curl -X GET "https://hr.healthcarology.org/api/v1/agents/search?term=john&limit=
 
 **Exemple de requête:**
 ```bash
-curl -X GET "https://hr.healthcarology.org/api/v1/users?page=1&itemsPerPage=30&order[lastname]=asc" \
+curl -X GET "https://dolasolutions.com/api/v1/users?page=1&itemsPerPage=30&order[lastname]=asc" \
   -H "Authorization: Bearer {token}"
 ```
 
@@ -418,7 +522,7 @@ curl -X GET "https://hr.healthcarology.org/api/v1/users?page=1&itemsPerPage=30&o
 
 **Exemple de requête:**
 ```bash
-curl -X GET "https://hr.healthcarology.org/api/v1/users/123" \
+curl -X GET "https://dolasolutions.com/api/v1/users/123" \
   -H "Authorization: Bearer {token}"
 ```
 
@@ -447,47 +551,50 @@ curl -X GET "https://hr.healthcarology.org/api/v1/users/123" \
 
 ### POST /api/v1/users
 
-**Créer un utilisateur** - Créez un nouvel utilisateur.
+**Créer un utilisateur** - Créez un nouvel utilisateur avec validation complète.
 
-**URL:** `POST /api/v1/users`  
-**Authentification:** JWT requis
+**URL:** `POST /api/v1/users`
+**Authentification:** JWT requis (rôle: CREATE_USER)
+**ApiResource:** `App\ApiResource\V1\UserResource`
+**Input DTO:** `App\Dto\Input\UserInputDto`
+**Validation:** Groupes `user:create` + contraintes de base
+**Groupes de sérialisation:** `user:write` pour l'input
 
-**Paramètres du body (JSON):**
+**Paramètres du body (JSON) - UserInputDto:**
 ```json
 {
+  "email": "string (requis, format email)",
+  "plainPassword": "string (requis, min 8 caractères)",
   "firstname": "string (requis)",
   "lastname": "string (requis)",
-  "email": "string (requis)",
-  "password": "string (requis)",
+  "middlename": "string (optionnel)",
+  "gender": "Male|Female|Other (optionnel)",
+  "phoneNumber": "string (optionnel, format: +XXX ou 7-20 chiffres)",
   "matricule": "string (optionnel)",
-  "phoneNumber": "string (optionnel)",
-  "roles": ["array (optionnel)"],
-  "company": "/api/v1/companies/1 (IRI, requis)"
+  "serviceId": "string (optionnel, ID du service)"
 }
 ```
 
 **Exemple de requête:**
 ```bash
-curl -X POST "https://hr.healthcarology.org/api/v1/users" \
+curl -X POST "https://dolasolutions.com/api/v1/users" \
   -H "Authorization: Bearer {token}" \
   -H "Content-Type: application/json" \
   -d '{
+    "email": "jane.smith@example.com",
+    "plainPassword": "SecurePass123!",
     "firstname": "Jane",
     "lastname": "Smith",
-    "email": "jane.smith@example.com",
-    "password": "SecurePass123!",
-    "matricule": "EMP002",
+    "gender": "Female",
     "phoneNumber": "+243991234568",
-    "company": "/api/v1/companies/1"
+    "matricule": "EMP002",
+    "serviceId": "10"
   }'
 ```
 
 **Réponse (201 Created):**
 ```json
 {
-  "@context": "/api/v1/contexts/User",
-  "@id": "/api/v1/users/124",
-  "@type": "User",
   "id": 124,
   "firstname": "Jane",
   "lastname": "Smith",
@@ -495,6 +602,17 @@ curl -X POST "https://hr.healthcarology.org/api/v1/users" \
   "matricule": "EMP002"
 }
 ```
+
+**Validation des champs (UserInputDto):**
+- `email`: Requis pour la création, doit être un email valide, doit être unique
+- `plainPassword`: Requis pour la création, minimum 8 caractères
+- `firstname`: Requis pour création et mise à jour
+- `lastname`: Requis pour création et mise à jour
+- `middlename`: Optionnel
+- `gender`: Doit être "Male", "Female" ou "Other"
+- `phoneNumber`: Format regex: `^\+?[0-9\s\-]{7,20}$`
+- `matricule`: Optionnel
+- `serviceId`: Optionnel, doit être un ID de service valide
 
 ---
 
@@ -511,13 +629,38 @@ curl -X POST "https://hr.healthcarology.org/api/v1/users" \
 
 **Modifier un utilisateur (partiel)** - Modifie uniquement les champs spécifiés.
 
-**URL:** `PATCH /api/v1/users/{id}`  
+**URL:** `PATCH /api/v1/users/{id}`
 **Authentification:** JWT requis
 
-**Paramètres du body (JSON):**
+**Paramètres du body (JSON) - UserInputDto (champs partiels):**
 ```json
 {
-  "phoneNumber": "+243991234569"
+  "phoneNumber": "+243991234569",
+  "firstname": "Jean",
+  "gender": "Male"
+}
+```
+
+**Champs modifiables:**
+- `email`: Email valide (doit être unique)
+- `plainPassword`: Minimum 8 caractères
+- `firstname`: Prénom requis
+- `lastname`: Nom requis
+- `middlename`: Second prénom
+- `gender`: "Male", "Female" ou "Other"
+- `phoneNumber`: Format valide
+- `matricule`: Matricule d'employé
+- `serviceId`: ID du service
+
+**Réponse (200 OK):**
+```json
+{
+  "id": 123,
+  "firstname": "Jean",
+  "lastname": "Doe",
+  "email": "john.doe@example.com",
+  "phoneNumber": "+243991234569",
+  "gender": "Male"
 }
 ```
 
@@ -556,7 +699,7 @@ curl -X POST "https://hr.healthcarology.org/api/v1/users" \
 
 **Exemple de requête:**
 ```bash
-curl -X GET "https://hr.healthcarology.org/api/v1/contracts?contractType=CDI" \
+curl -X GET "https://dolasolutions.com/api/v1/contracts?contractType=CDI" \
   -H "Authorization: Bearer {token}"
 ```
 
@@ -635,83 +778,175 @@ curl -X GET "https://hr.healthcarology.org/api/v1/contracts?contractType=CDI" \
 
 ### POST /api/v1/presences/checkin
 
-**Enregistrer un pointage** - Enregistre la présence de l'agent connecté.
+**Enregistrer un pointage** - Enregistre la présence de l'agent connecté avec validation métier.
 
-**URL:** `POST /api/v1/presences/checkin`  
-**Authentification:** JWT requis
+**URL:** `POST /api/v1/presences/checkin`
+**Authentification:** JWT requis (ROLE_USER)
+**ApiResource:** `App\ApiResource\V1\PresenceResource`
+**Processor:** `App\State\Processor\CheckinProcessor`
+**Input DTO:** `App\Dto\Presence\CheckinInputDto`
+**Output DTO:** `App\Dto\Presence\CheckinOutputDto`
 
-**Paramètres du body (JSON):**
+**Paramètres du body (JSON) - CheckinInputDto:**
 ```json
 {
-  "latitude": -4.3276,
-  "longitude": 15.3136
+  "type": "CHECKIN|CHECKOUT|BREAK_START|BREAK_END (requis)",
+  "latitude": "number (requis)",
+  "longitude": "number (requis)",
+  "comment": "string (optionnel)",
+  "deviceInfo": "string (optionnel)"
 }
 ```
+
+**Types de pointage disponibles:**
+- `CHECKIN`: Arrivée/Début de journée
+- `CHECKOUT`: Départ/Fin de journée
+- `BREAK_START`: Début de pause
+- `BREAK_END`: Fin de pause
 
 **Exemple de requête:**
 ```bash
-curl -X POST "https://hr.healthcarology.org/api/v1/presences/checkin" \
+curl -X POST "https://dolasolutions.com/api/v1/presences/checkin" \
   -H "Authorization: Bearer {token}" \
   -H "Content-Type: application/json" \
   -d '{
+    "type": "CHECKIN",
     "latitude": -4.3276,
-    "longitude": 15.3136
+    "longitude": 15.3136,
+    "comment": "Arrivée au bureau",
+    "deviceInfo": "iPhone 12"
   }'
 ```
 
-**Réponse (201 Created):**
+**Réponse (201 Created) - CheckinOutputDto:**
 ```json
 {
-  "@id": "/api/v1/presences/789",
-  "@type": "Presence",
   "id": 789,
-  "date": "2024-10-18T08:30:00+00:00",
+  "type": "CHECKIN",
+  "timestamp": "2024-10-18T08:30:00+00:00",
   "status": "validated",
-  "latitude": -4.3276,
-  "longitude": 15.3136,
-  "agent": {
-    "@id": "/api/v1/users/123",
-    "fullname": "John Doe"
-  }
+  "locationValidated": true,
+  "message": "Pointage enregistré avec succès",
+  "nextAllowedActions": ["BREAK_START"]
 }
 ```
 
+**Champs de réponse (CheckinOutputDto):**
+- `id` (integer): ID du pointage
+- `type` (string): Type de pointage effectué
+- `timestamp` (datetime): Date et heure du pointage
+- `status` (string): Statut du pointage ("validated", "pending", etc.)
+- `locationValidated` (boolean): Indique si la localisation est valide
+- `message` (string, nullable): Message informatif
+- `nextAllowedActions` (array): Liste des actions autorisées après ce pointage
+
+**Validation des champs (CheckinInputDto):**
+- `type`: Requis, doit être CHECKIN, CHECKOUT, BREAK_START ou BREAK_END
+- `latitude`: Requis, doit être un nombre valide
+- `longitude`: Requis, doit être un nombre valide
+- `comment`: Optionnel
+- `deviceInfo`: Optionnel
+
 **Erreurs possibles:**
-- `400 Bad Request`: Coordonnées hors zone autorisée
-- `422 Unprocessable Entity`: Pointage déjà effectué aujourd'hui
+- `400 Bad Request`: Coordonnées invalides ou hors zone autorisée
+- `422 Unprocessable Entity`: Pointage déjà effectué ou action non autorisée
 
 ---
 
 ### GET /api/v1/presences
 
-**Liste des présences** - Récupérez l'historique des pointages.
+**Liste des présences** - Récupérez l'historique des pointages de l'agent connecté.
 
-**URL:** `GET /api/v1/presences`  
-**Authentification:** JWT requis
+**URL:** `GET /api/v1/presences`
+**Authentification:** JWT requis (ROLE_USER)
+**ApiResource:** `App\ApiResource\V1\PresenceResource`
+**Provider:** `App\State\Provider\PresenceCollectionProvider`
+**Output DTO:** `App\Dto\Presence\PresenceOutputDto`
 
 **Paramètres de requête:**
 
 | Paramètre | Type | Description | Exemple |
 |-----------|------|-------------|---------|
 | `page` | integer | Numéro de page | `?page=1` |
+| `itemsPerPage` | integer | Éléments par page (défaut: 30, max: 100) | `?itemsPerPage=50` |
 | `month` | integer | Mois (1-12) | `?month=10` |
 | `year` | integer | Année | `?year=2024` |
-| `status` | string | Statut | `?status=validated` |
+| `status` | string | Statut du pointage | `?status=validated` |
 
 **Exemple de requête:**
 ```bash
-curl -X GET "https://hr.healthcarology.org/api/v1/presences?month=10&year=2024" \
+curl -X GET "https://dolasolutions.com/api/v1/presences?month=10&year=2024&page=1&itemsPerPage=30" \
   -H "Authorization: Bearer {token}"
 ```
+
+**Réponse (200 OK) - PresenceOutputDto list:**
+```json
+{
+  "@context": "/api/v1/contexts/Presence",
+  "@id": "/api/v1/presences",
+  "@type": "hydra:Collection",
+  "hydra:member": [
+    {
+      "id": 789,
+      "checkin": "2024-10-18T08:30:00+00:00",
+      "checkout": "2024-10-18T17:30:00+00:00",
+      "type": "STANDARD",
+      "status": "validated",
+      "timestamp": "2024-10-18T08:30:00+00:00",
+      "durationInMinutes": 540,
+      "comment": "Journée normale",
+      "locationValidated": true,
+      "validationNote": null
+    }
+  ],
+  "hydra:totalItems": 22,
+  "hydra:view": {
+    "@id": "/api/v1/presences?page=1",
+    "@type": "hydra:PartialCollectionView"
+  }
+}
+```
+
+**Champs de réponse (PresenceOutputDto):**
+- `id` (integer): ID du pointage
+- `checkin` (datetime, nullable): Date et heure d'arrivée
+- `checkout` (datetime, nullable): Date et heure de départ
+- `type` (string, nullable): Type de présence
+- `status` (string): Statut du pointage
+- `timestamp` (datetime, nullable): Timestamp du pointage
+- `durationInMinutes` (integer, nullable): Durée en minutes
+- `comment` (string, nullable): Commentaire associé
+- `locationValidated` (boolean): Indique si la localisation est valide
+- `validationNote` (string, nullable): Note de validation
 
 ---
 
 ### GET /api/v1/presences/{id}
 
-**Détails d'une présence**
+**Détails d'une présence** - Récupérez les détails complets d'une présence spécifique.
 
-**URL:** `GET /api/v1/presences/{id}`  
-**Authentification:** JWT requis
+**URL:** `GET /api/v1/presences/{id}`
+**Authentification:** JWT requis (ROLE_USER)
+**ApiResource:** `App\ApiResource\V1\PresenceResource`
+**Provider:** `App\State\Provider\PresenceItemProvider`
+**Output DTO:** `App\Dto\Presence\PresenceOutputDto`
+**Sécurité:** Vérifie automatiquement que la présence appartient à l'agent connecté
+
+**Réponse (200 OK) - PresenceOutputDto:**
+```json
+{
+  "id": 789,
+  "checkin": "2024-10-18T08:30:00+00:00",
+  "checkout": "2024-10-18T17:30:00+00:00",
+  "type": "STANDARD",
+  "status": "validated",
+  "timestamp": "2024-10-18T08:30:00+00:00",
+  "durationInMinutes": 540,
+  "comment": "Journée normale",
+  "locationValidated": true,
+  "validationNote": null
+}
+```
 
 ---
 
@@ -719,27 +954,32 @@ curl -X GET "https://hr.healthcarology.org/api/v1/presences?month=10&year=2024" 
 
 ### GET /api/v1/payslips
 
-**Liste des fiches de paie** - Récupérez vos fiches de paie.
+**Liste des fiches de paie** - Récupérez vos fiches de paie avec détails de calcul.
 
-**URL:** `GET /api/v1/payslips`  
-**Authentification:** JWT requis
+**URL:** `GET /api/v1/payslips`
+**Authentification:** JWT requis (ROLE_USER)
+**ApiResource:** `App\ApiResource\V1\PayslipResource`
+**Provider:** `App\State\Provider\PayslipCollectionProvider`
+**Output DTO:** `App\Dto\Payroll\PayslipOutputDto`
+**Ordre par défaut:** periodMonth DESC (derniers mois d'abord)
 
 **Paramètres de requête:**
 
 | Paramètre | Type | Description | Exemple |
 |-----------|------|-------------|---------|
 | `page` | integer | Numéro de page | `?page=1` |
+| `itemsPerPage` | integer | Éléments par page (défaut: 30, max: 100) | `?itemsPerPage=30` |
 | `month` | integer | Mois (1-12) | `?month=9` |
 | `year` | integer | Année | `?year=2024` |
 | `status` | string | Statut | `?status=validated` |
 
 **Exemple de requête:**
 ```bash
-curl -X GET "https://hr.healthcarology.org/api/v1/payslips?month=9&year=2024" \
+curl -X GET "https://dolasolutions.com/api/v1/payslips?month=9&year=2024&page=1" \
   -H "Authorization: Bearer {token}"
 ```
 
-**Réponse (200 OK):**
+**Réponse (200 OK) - PayslipOutputDto list:**
 ```json
 {
   "@context": "/api/v1/contexts/Payslip",
@@ -747,32 +987,125 @@ curl -X GET "https://hr.healthcarology.org/api/v1/payslips?month=9&year=2024" \
   "@type": "hydra:Collection",
   "hydra:member": [
     {
-      "@id": "/api/v1/payslips/456",
-      "@type": "Payslip",
-      "id": 456,
-      "month": 9,
-      "year": 2024,
+      "id": "456",
+      "agentName": "John Doe",
+      "matricule": "EMP001",
+      "periodMonth": 9,
+      "periodYear": 2024,
+      "baseSalary": 2500000,
       "grossSalary": 2500000,
       "netSalary": 2125000,
-      "status": "validated",
-      "agent": {
-        "@id": "/api/v1/users/123",
-        "fullname": "John Doe"
-      }
+      "workedHours": 160,
+      "status": "validated"
     }
   ],
-  "hydra:totalItems": 12
+  "hydra:totalItems": 12,
+  "hydra:view": {
+    "@id": "/api/v1/payslips?page=1",
+    "@type": "hydra:PartialCollectionView"
+  }
 }
 ```
+
+**Champs de réponse (PayslipOutputDto - vue liste):**
+- `id` (string): UUID de la fiche de paie
+- `agentName` (string): Nom complet de l'agent
+- `matricule` (string): Matricule d'employé
+- `periodMonth` (integer): Mois de la paie (1-12)
+- `periodYear` (integer): Année de la paie
+- `baseSalary` (float): Salaire de base
+- `grossSalary` (float): Salaire brut (avant déductions)
+- `netSalary` (float): Salaire net (après déductions)
+- `workedHours` (integer): Heures travaillées
+- `status` (string): Statut de la fiche ("validated", "pending", "draft", etc.)
 
 ---
 
 ### GET /api/v1/payslips/{id}
 
-**Détails d'une fiche de paie** - Voir le détail complet avec déductions.
+**Détails d'une fiche de paie** - Voir le détail complet avec déductions, bonus et URL PDF.
 
-**URL:** `GET /api/v1/payslips/{id}`  
-**Authentification:** JWT requis
+**URL:** `GET /api/v1/payslips/{id}`
+**Authentification:** JWT requis (ROLE_USER)
+**ApiResource:** `App\ApiResource\V1\PayslipResource`
+**Provider:** `App\State\Provider\PayslipItemProvider`
+**Output DTO:** `App\Dto\Payroll\PayslipOutputDto`
+**Sécurité:** Vérifie automatiquement que la fiche appartient à l'agent connecté
+
+**Réponse (200 OK) - PayslipOutputDto (détails complets):**
+```json
+{
+  "id": "456",
+  "agentName": "John Doe",
+  "matricule": "EMP001",
+  "periodMonth": 9,
+  "periodYear": 2024,
+  "baseSalary": 2500000,
+  "grossSalary": 2500000,
+  "netSalary": 2125000,
+  "workedHours": 160,
+  "status": "validated",
+  "calculationDetails": {
+    "presenceMinutes": 9600,
+    "timeReportMinutes": 0,
+    "totalMinutes": 9600,
+    "overtimeMinutes": 0,
+    "baseSalaryAmount": 2500000,
+    "overtimeAmount": 0,
+    "bonusesAmount": 0,
+    "employeeContributionsAmount": 250000,
+    "incomeTaxAmount": 125000,
+    "netPayableAmount": 2125000
+  },
+  "bonuses": [
+    {
+      "id": "bonus123",
+      "name": "Performance Bonus",
+      "amount": 150000,
+      "date": "2024-09-30T00:00:00+00:00"
+    }
+  ],
+  "deductions": [
+    {
+      "type": "employee_social",
+      "name": "Cotisations sociales",
+      "amount": 250000,
+      "rate": 10.0
+    },
+    {
+      "type": "income_tax",
+      "name": "Impôt sur le revenu",
+      "amount": 125000,
+      "rate": 5.0
+    }
+  ],
+  "pdfUrl": "/api/v1/payslips/456/pdf"
+}
+```
+
+**Champs de réponse (PayslipOutputDto - détails complets):**
+- `calculationDetails` (object, nullable): Détails des calculs
+  - `presenceMinutes` (integer): Minutes de présence
+  - `timeReportMinutes` (integer): Minutes de rapport temps
+  - `totalMinutes` (integer): Total des minutes
+  - `overtimeMinutes` (integer): Minutes supplémentaires
+  - `baseSalaryAmount` (float): Montant salaire de base
+  - `overtimeAmount` (float): Montant heures supplémentaires
+  - `bonusesAmount` (float): Montant total des bonus
+  - `employeeContributionsAmount` (float): Cotisations sociales
+  - `incomeTaxAmount` (float): Impôt sur le revenu
+  - `netPayableAmount` (float): Montant net à verser
+- `bonuses` (array): Liste des bonus appliqués
+  - `id` (string): ID du bonus
+  - `name` (string): Nom du bonus
+  - `amount` (float): Montant
+  - `date` (datetime): Date du bonus
+- `deductions` (array): Liste des déductions
+  - `type` (string): Type de déduction ("employee_social", "income_tax", etc.)
+  - `name` (string): Nom de la déduction
+  - `amount` (float): Montant de la déduction
+  - `rate` (float): Taux appliqué
+- `pdfUrl` (string, nullable): URL pour télécharger le PDF de la fiche
 
 ---
 
@@ -798,7 +1131,7 @@ curl -X GET "https://hr.healthcarology.org/api/v1/payslips?month=9&year=2024" \
 
 **Exemple de requête:**
 ```bash
-curl -X GET "https://hr.healthcarology.org/api/v1/leaves?status=pending" \
+curl -X GET "https://dolasolutions.com/api/v1/leaves?status=pending" \
   -H "Authorization: Bearer {token}"
 ```
 
@@ -869,7 +1202,7 @@ curl -X GET "https://hr.healthcarology.org/api/v1/leaves?status=pending" \
 
 **Exemple de requête:**
 ```bash
-curl -X POST "https://hr.healthcarology.org/api/v1/leaves" \
+curl -X POST "https://dolasolutions.com/api/v1/leaves" \
   -H "Authorization: Bearer {token}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -922,7 +1255,7 @@ curl -X POST "https://hr.healthcarology.org/api/v1/leaves" \
 
 **Exemple de requête:**
 ```bash
-curl -X PATCH "https://hr.healthcarology.org/api/v1/leaves/xyz789" \
+curl -X PATCH "https://dolasolutions.com/api/v1/leaves/xyz789" \
   -H "Authorization: Bearer {token}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -954,7 +1287,7 @@ curl -X PATCH "https://hr.healthcarology.org/api/v1/leaves/xyz789" \
 
 **Exemple de requête:**
 ```bash
-curl -X GET "https://hr.healthcarology.org/api/v1/time_reports?agent.id=123" \
+curl -X GET "https://dolasolutions.com/api/v1/time_reports?agent.id=123" \
   -H "Authorization: Bearer {token}"
 ```
 
@@ -1018,7 +1351,7 @@ curl -X GET "https://hr.healthcarology.org/api/v1/time_reports?agent.id=123" \
 
 **Exemple de requête:**
 ```bash
-curl -X POST "https://hr.healthcarology.org/api/v1/time_reports" \
+curl -X POST "https://dolasolutions.com/api/v1/time_reports" \
   -H "Authorization: Bearer {token}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1110,7 +1443,7 @@ curl -X POST "https://hr.healthcarology.org/api/v1/time_reports" \
 
 **Exemple:**
 ```bash
-curl -X GET "https://hr.healthcarology.org/api/v1/provinces?country=1" \
+curl -X GET "https://dolasolutions.com/api/v1/provinces?country=1" \
   -H "Authorization: Bearer {token}"
 ```
 
@@ -1128,7 +1461,7 @@ curl -X GET "https://hr.healthcarology.org/api/v1/provinces?country=1" \
 
 **Exemple:**
 ```bash
-curl -X GET "https://hr.healthcarology.org/api/v1/cities?province=5" \
+curl -X GET "https://dolasolutions.com/api/v1/cities?province=5" \
   -H "Authorization: Bearer {token}"
 ```
 
@@ -1258,7 +1591,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://hr.healthcarology.org/api/v1';
+  static const String baseUrl = 'https://dolasolutions.com/api/v1';
   
   // 1. Login
   Future<Map<String, dynamic>> login(String username, String password) async {
@@ -1391,16 +1724,56 @@ class ApiService {
     final data = await apiRequest('/users?page=$page&itemsPerPage=$itemsPerPage');
     return data['hydra:member'] as List;
   }
-  
+
   Future<Map<String, dynamic>> getUser(int id) async {
     return await apiRequest('/users/$id');
   }
-  
-  Future<Map<String, dynamic>> checkin(double latitude, double longitude) async {
+
+  Future<Map<String, dynamic>> createUser({
+    required String email,
+    required String plainPassword,
+    required String firstname,
+    required String lastname,
+    String? middlename,
+    String? gender,
+    String? phoneNumber,
+    String? matricule,
+    String? serviceId,
+  }) async {
+    return await apiRequest(
+      '/users',
+      method: 'POST',
+      body: {
+        'email': email,
+        'plainPassword': plainPassword,
+        'firstname': firstname,
+        'lastname': lastname,
+        if (middlename != null) 'middlename': middlename,
+        if (gender != null) 'gender': gender,
+        if (phoneNumber != null) 'phoneNumber': phoneNumber,
+        if (matricule != null) 'matricule': matricule,
+        if (serviceId != null) 'serviceId': serviceId,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> checkin({
+    required String type,
+    required double latitude,
+    required double longitude,
+    String? comment,
+    String? deviceInfo,
+  }) async {
     return await apiRequest(
       '/presences/checkin',
       method: 'POST',
-      body: {'latitude': latitude, 'longitude': longitude},
+      body: {
+        'type': type,
+        'latitude': latitude,
+        'longitude': longitude,
+        if (comment != null) 'comment': comment,
+        if (deviceInfo != null) 'deviceInfo': deviceInfo,
+      },
     );
   }
   
@@ -1592,25 +1965,35 @@ class CheckinScreen extends StatefulWidget {
 class _CheckinScreenState extends State<CheckinScreen> {
   final _apiService = ApiService();
   bool _isLoading = false;
-  
+  String _checkinType = 'CHECKIN';
+
   Future<void> _handleCheckin() async {
     setState(() => _isLoading = true);
-    
+
     try {
       // Obtenir la position GPS
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      
-      // Envoyer le pointage
+
+      // Envoyer le pointage avec le type approprié
       final data = await _apiService.checkin(
-        position.latitude,
-        position.longitude,
+        type: _checkinType,
+        latitude: position.latitude,
+        longitude: position.longitude,
+        comment: 'Pointage automatique',
+        deviceInfo: 'Flutter App',
       );
-      
+
+      final message = data['message'] ?? 'Pointage enregistré avec succès';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Pointage enregistré avec succès')),
+        SnackBar(content: Text(message)),
       );
+
+      // Afficher les prochaines actions autorisées
+      if (data['nextAllowedActions'] != null) {
+        _showNextActionsDialog(data['nextAllowedActions']);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erreur: $e')),
@@ -1619,16 +2002,56 @@ class _CheckinScreenState extends State<CheckinScreen> {
       setState(() => _isLoading = false);
     }
   }
-  
+
+  void _showNextActionsDialog(List<dynamic> nextActions) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Actions disponibles'),
+        content: Text('Prochaines actions: ${nextActions.join(", ")}'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Pointage')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: _isLoading ? null : _handleCheckin,
-          child: Text(_isLoading ? 'Enregistrement...' : 'Pointer'),
-        ),
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: DropdownButton<String>(
+              value: _checkinType,
+              isExpanded: true,
+              items: ['CHECKIN', 'CHECKOUT', 'BREAK_START', 'BREAK_END']
+                  .map((type) => DropdownMenuItem(
+                    value: type,
+                    child: Text(type),
+                  ))
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _checkinType = value);
+                }
+              },
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _handleCheckin,
+                child: Text(_isLoading ? 'Enregistrement...' : 'Pointer'),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1651,7 +2074,7 @@ dependencies:
 ## Support
 
 **Documentation interactive Swagger:**  
-https://hr.healthcarology.org/api/docs
+https://dolasolutions.com/api/docs
 
 **Contact:**  
 Équipe Dev Healthcarology
