@@ -79,7 +79,7 @@ This documentation outlines the available endpoints for managing users and authe
     - [GET `/api/countries/{id}/provinces`](#get-apicountriesidprovinces)
 
 ## General Notes
-## https://sante.healthcarology.org
+## https://healthcarology.org
 ### Authentication
 
 Most endpoints require authentication. To authenticate, you must first obtain a JWT by sending a `POST` request to the `/api/login` endpoint with the user's credentials.
