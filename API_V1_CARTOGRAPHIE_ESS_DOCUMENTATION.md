@@ -18,6 +18,8 @@ Cette documentation présente les **8 nouveaux endpoints API REST** créés pour
 
 ## 🚀 Endpoints Disponibles (Quick Reference)
 
+### Endpoints Principaux (8)
+
 | # | Endpoint | Description |
 |---|----------|-------------|
 | 1 | `GET /api/v1/type-of-companies` | Types d'ESS (hôpital, clinique, etc.) |
@@ -29,13 +31,35 @@ Cette documentation présente les **8 nouveaux endpoints API REST** créés pour
 | 7 | `GET /api/v1/health-areas` | Aires de santé |
 | 8 | `GET /api/v1/companies` | ESS (Établissements de santé) |
 
+### Routes Imbriquées (12 nouveaux endpoints)
+
+| # | Endpoint | Description |
+|---|----------|-------------|
+| 1 | `GET /api/v1/countries/{id}/provinces` | Toutes les provinces d'un pays |
+| 2 | `GET /api/v1/countries/{id}/health-zones` | Toutes les zones de santé d'un pays |
+| 3 | `GET /api/v1/provinces/{id}/cities` | Toutes les villes d'une province |
+| 4 | `GET /api/v1/provinces/{id}/health-zones` | Toutes les zones de santé d'une province |
+| 5 | `GET /api/v1/cities/{id}/towns` | Toutes les communes d'une ville |
+| 6 | `GET /api/v1/health-zones/{id}/health-areas` | Toutes les aires de santé d'une zone |
+| 7 | `GET /api/v1/health-areas/{id}/companies` | Tous les ESS d'une aire de santé |
+| 8 | `GET /api/v1/type-of-companies/{id}/companies` | Tous les ESS d'un type donné |
+
 **Exemples de filtres:**
 ```bash
+# Endpoints classiques avec filtres
 GET /api/v1/countries/1                  # Pays avec provinces et zones
 GET /api/v1/provinces?country.id=1       # Provinces d'un pays
 GET /api/v1/health-zones?province.id=5   # Zones d'une province
 GET /api/v1/health-areas?zone.id=3       # Aires d'une zone
 GET /api/v1/companies?area.id=1&active=true  # ESS actifs d'une aire
+
+# Routes imbriquées (nouveauté)
+GET /api/v1/countries/1/provinces        # Provinces du pays ID 1
+GET /api/v1/countries/1/health-zones     # Zones de santé du pays ID 1
+GET /api/v1/provinces/5/health-zones     # Zones de santé de la province ID 5
+GET /api/v1/health-zones/3/health-areas  # Aires de santé de la zone ID 3
+GET /api/v1/health-areas/1/companies     # ESS de l'aire de santé ID 1
+GET /api/v1/type-of-companies/2/companies  # ESS du type ID 2 (ex: Centre de Santé)
 ```
 
 ---
